@@ -1,9 +1,10 @@
 const AUTH_KEY = "hehe-gallery-auth-v2";
+const LOCAL_ALBUMS_KEY = "hehe-local-albums-v1";
 
 const state = {
   data: null,
   category: "全部",
-  albumId: "全部",
+  albumId: null,
   query: "",
   initialized: false,
   key: null,
@@ -49,6 +50,38 @@ const decryptAssetUrl = async (item) => {
   item.src = url;
 };
 
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+const loadLocalAlbums = () => {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_ALBUMS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalAlbums = (albums) => {
+  localStorage.setItem(LOCAL_ALBUMS_KEY, JSON.stringify(albums));
+};
+
+const mergeLocalAlbums = () => {
+  const localAlbums = loadLocalAlbums();
+  if (!localAlbums.length) return;
+  state.data.albums = [...localAlbums, ...state.data.albums.filter((album) => !album.local)];
+  if (!state.data.categories.some((item) => item.name === "她的上传")) {
+    state.data.categories.push({ name: "她的上传", count: localAlbums.reduce((sum, album) => sum + album.count, 0) });
+  }
+  state.data.stats.albums += localAlbums.length;
+  state.data.stats.photos += localAlbums.reduce((sum, album) => sum + album.photos, 0);
+  state.data.stats.displayItems += localAlbums.reduce((sum, album) => sum + album.count, 0);
+};
+
 const showGallery = async (password) => {
   document.getElementById("auth-error").textContent = "正在解锁相册...";
   const configResponse = await fetch("secure/config.json", { cache: "no-store" });
@@ -59,6 +92,7 @@ const showGallery = async (password) => {
 
   const items = state.data.albums.flatMap((album) => album.items);
   await Promise.all(items.map(decryptAssetUrl));
+  mergeLocalAlbums();
 
   sessionStorage.setItem(AUTH_KEY, "unlocked");
   document.body.classList.remove("locked");
@@ -131,7 +165,7 @@ const setText = (id, text) => {
 };
 
 const currentAlbum = () => {
-  if (state.albumId === "全部" || !state.data) return null;
+  if (!state.albumId || !state.data) return null;
   return state.data.albums.find((album) => album.id === state.albumId) || null;
 };
 
@@ -142,6 +176,9 @@ const jumpToGallery = () => {
 const selectAlbum = (albumId) => {
   state.albumId = albumId;
   state.category = "全部";
+  document.querySelectorAll(".gallery-panel").forEach((element) => {
+    element.hidden = false;
+  });
   renderChips(state.data);
   renderGallery();
   jumpToGallery();
@@ -169,21 +206,30 @@ const renderStats = (data) => {
 
 const tag = (text) => `<span class="tag">${text}</span>`;
 
+const sortAlbums = (albums) =>
+  albums.slice().sort((a, b) => {
+    if (!a.date && !b.date) return a.title.localeCompare(b.title, "zh-CN");
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+
 const renderTimeline = (albums) => {
   const timeline = document.getElementById("timeline");
-  timeline.innerHTML = albums
-    .slice()
-    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"))
+  timeline.innerHTML = sortAlbums(albums)
     .map(
       (album) => `
-        <article class="time-card clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
-          <span class="date">${formatDate(album.date)}</span>
-          <h3>${album.title}</h3>
-          <p class="album-meta">${album.place || album.mood} · ${album.count} 份素材</p>
-          <div class="tag-row">
-            ${tag(album.category)}
-            ${tag(album.mood)}
-            ${album.videos ? tag(`${album.videos} 个视频`) : ""}
+        <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
+          <div class="timeline-dot"></div>
+          <div class="timeline-card">
+            <span class="date">${formatDate(album.date)}</span>
+            <h3>${album.title}</h3>
+            <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
+            <div class="tag-row">
+              ${tag(album.category)}
+              ${tag(album.mood)}
+              ${album.videos ? tag(`${album.videos} 个视频`) : ""}
+            </div>
           </div>
         </article>
       `,
@@ -200,6 +246,7 @@ const renderTimeline = (albums) => {
 
 const renderAlbums = (albums) => {
   const grid = document.getElementById("album-grid");
+  if (!grid) return;
   grid.innerHTML = albums
     .slice()
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
@@ -240,7 +287,6 @@ const renderChips = (data) => {
   chips.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
       state.category = button.dataset.category;
-      state.albumId = "全部";
       renderChips(state.data);
       renderGallery();
     });
@@ -248,7 +294,7 @@ const renderChips = (data) => {
 };
 
 const itemMatches = (item) => {
-  const albumMatch = state.albumId === "全部" || item.albumId === state.albumId;
+  const albumMatch = !state.albumId || item.albumId === state.albumId;
   const categoryMatch = state.category === "全部" || item.category === state.category;
   const query = state.query.trim().toLowerCase();
   if (!query) return albumMatch && categoryMatch;
@@ -309,11 +355,10 @@ const openLightbox = (id) => {
   document.getElementById("lightbox").showModal();
 };
 
-const addLocalAlbum = (title, date, files) => {
+const addLocalAlbum = async (title, date, files) => {
   const albumId = `local-${Date.now()}`;
-  const items = Array.from(files).map((file, index) => {
-    const src = URL.createObjectURL(file);
-    state.objectUrls.push(src);
+  const items = await Promise.all(Array.from(files).map(async (file, index) => {
+    const src = await fileToDataUrl(file);
     return {
       id: `${albumId}-${index + 1}`,
       type: "image",
@@ -324,12 +369,13 @@ const addLocalAlbum = (title, date, files) => {
       year: (date || new Date().toISOString()).slice(0, 4),
       bytes: file.size,
     };
-  });
+  }));
 
   if (!items.length) return;
 
-  state.data.albums.unshift({
+  const album = {
     id: albumId,
+    local: true,
     sourceFolder: "local",
     title,
     date: date || new Date().toISOString().slice(0, 10),
@@ -341,7 +387,10 @@ const addLocalAlbum = (title, date, files) => {
     photos: items.length,
     videos: 0,
     items,
-  });
+  };
+
+  state.data.albums.unshift(album);
+  saveLocalAlbums([album, ...loadLocalAlbums()]);
 
   if (!state.data.categories.some((item) => item.name === "她的上传")) {
     state.data.categories.push({ name: "她的上传", count: items.length });
@@ -352,7 +401,6 @@ const addLocalAlbum = (title, date, files) => {
   state.data.stats.displayItems += items.length;
   renderStats(state.data);
   renderTimeline(state.data.albums);
-  renderAlbums(state.data.albums);
   renderChips(state.data);
   selectAlbum(albumId);
 };
@@ -367,12 +415,12 @@ const bindGalleryEvents = () => {
     document.getElementById("lightbox").close();
   });
 
-  document.getElementById("local-album-form").addEventListener("submit", (event) => {
+  document.getElementById("local-album-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const title = document.getElementById("local-album-title").value.trim();
     const date = document.getElementById("local-album-date").value;
     const files = document.getElementById("local-album-files").files;
-    addLocalAlbum(title || "她的新合集", date, files);
+    await addLocalAlbum(title || "她的新合集", date, files);
     event.currentTarget.reset();
   });
 };
@@ -381,9 +429,7 @@ const initGallery = () => {
   bindGalleryEvents();
   renderStats(state.data);
   renderTimeline(state.data.albums);
-  renderAlbums(state.data.albums);
   renderChips(state.data);
-  renderGallery();
   state.initialized = true;
   document.getElementById("auth-error").textContent = "";
 };

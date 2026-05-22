@@ -59,20 +59,28 @@
         </section>
 
         <section class="section-head">
-          <p class="eyebrow">Mood Board</p>
-          <h2>按时间走，也能一键钻进某个合集。</h2>
-          <p>时间轴和主题相册都可以点击，进入对应合集的照片墙。单张照片不显示文件名，只保留合集、日期和氛围。</p>
+          <p class="eyebrow">Timeline</p>
+          <h2>按时间轴走，每个节点都是一个合集。</h2>
+          <p>先选择一个时间节点或本地合集，再进入对应照片墙。单张照片不显示文件名，只保留合集、日期和氛围。</p>
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
 
-        <section class="section-head" id="albums">
-          <p class="eyebrow">Albums</p>
-          <h2>主题相册</h2>
+        <section class="upload-panel" id="upload">
+          <div>
+            <p class="eyebrow">For Her</p>
+            <h2>她也可以建立自己的本地合集</h2>
+            <p>选择图片后，会在当前浏览器里生成一个本地合集并加入时间轴。图片不会上传到 GitHub，也不会被别人看到。</p>
+          </div>
+          <form id="local-album-form" class="local-album-form">
+            <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
+            <input id="local-album-date" type="date" />
+            <input id="local-album-files" type="file" accept="image/*" multiple required />
+            <button class="primary-button" type="submit">创建本地合集</button>
+          </form>
         </section>
-        <section class="album-grid" id="album-grid" aria-label="主题相册列表"></section>
 
-        <section class="toolbar" id="gallery">
+        <section class="toolbar gallery-panel" id="gallery" hidden>
           <div>
             <p class="eyebrow">Gallery</p>
             <h2>照片墙</h2>
@@ -87,21 +95,7 @@
           </div>
         </section>
 
-        <section class="masonry" id="masonry" aria-live="polite"></section>
-
-        <section class="upload-panel" id="upload">
-          <div>
-            <p class="eyebrow">For Her</p>
-            <h2>她也可以建立自己的合集</h2>
-            <p>选择图片后，会在当前浏览器里生成一个本地合集并进入照片墙。图片不会上传到 GitHub，也不会被别人看到。</p>
-          </div>
-          <form id="local-album-form" class="local-album-form">
-            <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
-            <input id="local-album-date" type="date" />
-            <input id="local-album-files" type="file" accept="image/*" multiple required />
-            <button class="primary-button" type="submit">创建本地合集</button>
-          </form>
-        </section>
+        <section class="masonry gallery-panel" id="masonry" aria-live="polite" hidden></section>
       </main>
     </div>
 

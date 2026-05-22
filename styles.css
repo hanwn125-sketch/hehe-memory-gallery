@@ -323,12 +323,43 @@ main {
 }
 
 .timeline {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  gap: 0;
+  margin: 34px 0 64px;
+  padding-left: 28px;
 }
 
-.time-card,
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: 2px;
+  background: linear-gradient(var(--accent), rgba(255, 248, 237, 0.12));
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0 0 18px;
+}
+
+.timeline-dot {
+  position: absolute;
+  top: 20px;
+  left: -27px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 207, 112, 0.5);
+}
+
+.timeline-card,
 .album-card,
 .photo-card {
   border: 1px solid var(--line);
@@ -347,17 +378,16 @@ main {
   transition: border-color 180ms ease, transform 180ms ease;
 }
 
-.time-card {
+.timeline-card {
   padding: 20px;
-  min-height: 180px;
 }
 
-.time-card .date {
+.timeline-card .date {
   color: var(--accent);
   font-weight: 800;
 }
 
-.time-card h3,
+.timeline-card h3,
 .album-card h3 {
   margin: 10px 0;
   font-size: 22px;
@@ -504,7 +534,7 @@ main {
   display: grid;
   grid-template-columns: 1fr minmax(280px, 420px);
   gap: 24px;
-  margin-top: 72px;
+  margin: 24px 0 72px;
   padding: 28px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -585,6 +615,10 @@ main {
 
 .lightbox-meta strong {
   color: var(--text);
+}
+
+[hidden] {
+  display: none !important;
 }
 
 @media (max-width: 900px) {
