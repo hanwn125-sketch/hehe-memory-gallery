@@ -43,11 +43,15 @@ const decryptJson = async (key, path) => {
 };
 
 const decryptAssetUrl = async (item) => {
-  const bytes = await decryptBytes(state.key, await fetchEncrypted(item.src));
+  if (item.decrypted) return item.src;
+  if (!item.encryptedSrc) item.encryptedSrc = item.src;
+  const bytes = await decryptBytes(state.key, await fetchEncrypted(item.encryptedSrc));
   const mime = item.type === "video" ? "video/mp4" : "image/jpeg";
   const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
   state.objectUrls.push(url);
   item.src = url;
+  item.decrypted = true;
+  return url;
 };
 
 const fileToDataUrl = (file) =>
@@ -82,6 +86,21 @@ const mergeLocalAlbums = () => {
   state.data.stats.displayItems += localAlbums.reduce((sum, album) => sum + album.count, 0);
 };
 
+const prepareEncryptedItems = () => {
+  state.data.albums.forEach((album) => {
+    album.items.forEach((item) => {
+      if (!item.local && !item.encryptedSrc) item.encryptedSrc = item.src;
+    });
+  });
+};
+
+const decryptInitialCovers = async () => {
+  const coverItems = state.data.albums
+    .map((album) => album.items.find((item) => item.type === "image") || album.items[0])
+    .filter(Boolean);
+  await Promise.all(coverItems.map(decryptAssetUrl));
+};
+
 const showGallery = async (password) => {
   document.getElementById("auth-error").textContent = "正在解锁相册...";
   const configResponse = await fetch("secure/config.json", { cache: "no-store" });
@@ -89,10 +108,9 @@ const showGallery = async (password) => {
   const config = await configResponse.json();
   state.key = await deriveKey(password, base64ToBytes(config.salt), config.iterations);
   state.data = await decryptJson(state.key, config.manifest);
-
-  const items = state.data.albums.flatMap((album) => album.items);
-  await Promise.all(items.map(decryptAssetUrl));
+  prepareEncryptedItems();
   mergeLocalAlbums();
+  await decryptInitialCovers();
 
   sessionStorage.setItem(AUTH_KEY, "unlocked");
   document.body.classList.remove("locked");
@@ -174,12 +192,17 @@ const jumpToGallery = () => {
   document.getElementById("gallery").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
-const selectAlbum = (albumId) => {
+const selectAlbum = async (albumId) => {
   state.albumId = albumId;
   state.category = "全部";
   document.querySelectorAll(".gallery-panel").forEach((element) => {
     element.hidden = false;
   });
+  const album = currentAlbum();
+  if (album) {
+    document.getElementById("active-filter").textContent = `正在打开「${album.title}」...`;
+    await Promise.all(album.items.map(decryptAssetUrl));
+  }
   renderChips(state.data);
   renderGallery();
   jumpToGallery();
@@ -234,8 +257,8 @@ const renderTimeline = (albums) => {
     .join("");
 
   timeline.querySelectorAll("[data-album]").forEach((card) => {
-    card.addEventListener("click", () => selectAlbum(card.dataset.album));
-    card.addEventListener("keydown", (event) => {
+    card.addEventListener("click", async () => selectAlbum(card.dataset.album));
+    card.addEventListener("keydown", async (event) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
     });
   });
@@ -268,8 +291,8 @@ const renderAlbums = (albums) => {
     .join("");
 
   grid.querySelectorAll("[data-album]").forEach((card) => {
-    card.addEventListener("click", () => selectAlbum(card.dataset.album));
-    card.addEventListener("keydown", (event) => {
+    card.addEventListener("click", async () => selectAlbum(card.dataset.album));
+    card.addEventListener("keydown", async (event) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
     });
   });
@@ -399,7 +422,7 @@ const addLocalAlbum = async (title, date, files) => {
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderChips(state.data);
-  selectAlbum(albumId);
+  await selectAlbum(albumId);
 };
 
 const bindGalleryEvents = () => {
