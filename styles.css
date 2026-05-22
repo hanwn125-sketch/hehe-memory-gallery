@@ -146,7 +146,7 @@ body.locked .site-shell {
     linear-gradient(90deg, rgba(17, 16, 14, 0.94), rgba(17, 16, 14, 0.44) 48%, rgba(17, 16, 14, 0.22)),
     var(--hero-image);
   background-size: cover;
-  background-position: center;
+  background-position: var(--hero-position, center);
 }
 
 .hero::after {
@@ -436,33 +436,6 @@ main {
   color: var(--muted);
 }
 
-.controls {
-  display: grid;
-  justify-items: end;
-  gap: 12px;
-}
-
-.search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: min(420px, 100%);
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--muted);
-}
-
-.search input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-}
-
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -556,8 +529,19 @@ main {
   cursor: pointer;
   font: inherit;
   font-weight: 800;
+  opacity: 0;
   pointer-events: auto;
+  transform: translateY(4px);
+  transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease, background 160ms ease;
   backdrop-filter: blur(14px);
+}
+
+.photo-card:hover .note-toggle,
+.photo-card:focus-within .note-toggle,
+.note-panel.note-open .note-toggle,
+.note-panel.has-note .note-toggle {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .note-toggle:hover,
@@ -718,10 +702,6 @@ main {
 
   .upload-panel {
     grid-template-columns: 1fr;
-  }
-
-  .controls {
-    justify-items: stretch;
   }
 
   .masonry {

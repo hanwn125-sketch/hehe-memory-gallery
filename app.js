@@ -277,7 +277,6 @@ const selectAlbum = (albumId) => {
   document.querySelectorAll(".gallery-panel").forEach((element) => {
     element.hidden = false;
   });
-  renderChips(state.data);
   renderGallery();
   jumpToGallery();
 };
@@ -289,13 +288,14 @@ const pickCoverItem = (album) => {
 
 const renderStats = (data) => {
   const heroAlbum =
-    data.albums.find((album) => album.title.includes("日常")) ||
     data.albums.find((album) => album.title.includes("甜甜")) ||
+    data.albums.find((album) => album.title.includes("日常")) ||
     data.albums.find((album) => album.cover) ||
     data.albums[0];
   const coverItem = pickCoverItem(heroAlbum);
   if (coverItem?.src) {
     document.getElementById("hero").style.setProperty("--hero-image", `url("${coverItem.src}")`);
+    document.getElementById("hero").style.setProperty("--hero-position", heroAlbum.title.includes("甜甜") ? "72% center" : "center");
   }
 };
 
@@ -339,21 +339,6 @@ const renderTimeline = (albums) => {
     card.addEventListener("click", () => selectAlbum(card.dataset.album));
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
-    });
-  });
-};
-
-const renderChips = (data) => {
-  const chips = document.getElementById("filter-chips");
-  const categories = ["全部", ...data.categories.map((item) => item.name)];
-  chips.innerHTML = categories
-    .map((name) => `<button class="chip${name === state.category ? " active" : ""}" type="button" data-category="${name}">${name}</button>`)
-    .join("");
-  chips.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.category = button.dataset.category;
-      renderChips(state.data);
-      renderGallery();
     });
   });
 };
@@ -499,7 +484,6 @@ const addLocalAlbum = async (title, date, files) => {
     state.data.albums.unshift(remoteAlbum);
     renderStats(state.data);
     renderTimeline(state.data.albums);
-    renderChips(state.data);
     selectAlbum(remoteAlbum.id);
     return;
   }
@@ -552,7 +536,6 @@ const addLocalAlbum = async (title, date, files) => {
   state.data.stats.displayItems += items.length;
   renderStats(state.data);
   renderTimeline(state.data.albums);
-  renderChips(state.data);
   selectAlbum(albumId);
 };
 
@@ -570,11 +553,6 @@ const addRemoteAlbum = async (title, date, files) => {
 };
 
 const bindGalleryEvents = () => {
-  document.getElementById("search-input").addEventListener("input", (event) => {
-    state.query = event.target.value;
-    renderGallery();
-  });
-
   document.getElementById("close-lightbox").addEventListener("click", () => {
     document.getElementById("lightbox").close();
   });
@@ -593,7 +571,6 @@ const initGallery = () => {
   bindGalleryEvents();
   renderStats(state.data);
   renderTimeline(state.data.albums);
-  renderChips(state.data);
   state.initialized = true;
   document.getElementById("auth-error").textContent = "";
 };
