@@ -1,16 +1,16 @@
 :root {
   color-scheme: dark;
-  --bg: #11100e;
-  --panel: #1b1916;
-  --panel-strong: #24211d;
-  --text: #fff8ed;
-  --muted: #c5b7a1;
-  --line: rgba(255, 248, 237, 0.14);
-  --accent: #ffcf70;
-  --accent-2: #ea6d88;
+  --bg: #15110d;
+  --panel: rgba(36, 30, 24, 0.74);
+  --panel-strong: #2b241c;
+  --text: #fff6e9;
+  --muted: #d3bfa3;
+  --line: rgba(255, 240, 215, 0.16);
+  --accent: #ffd38a;
+  --accent-2: #f59ab0;
   --green: #75c59d;
   --blue: #88b8d8;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
 }
 
 * {
@@ -23,9 +23,12 @@ html {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top left, rgba(255, 207, 112, 0.12), transparent 34rem), var(--bg);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 211, 138, 0.14), transparent 28rem),
+    radial-gradient(circle at 82% 18%, rgba(245, 154, 176, 0.1), transparent 26rem),
+    linear-gradient(180deg, #17130f, var(--bg));
   color: var(--text);
-  font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: "LXGW WenKai", "霞鹜文楷", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
 body.locked {
@@ -45,9 +48,9 @@ a {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(115deg, rgba(17, 16, 14, 0.82), rgba(17, 16, 14, 0.94)),
-    radial-gradient(circle at 24% 18%, rgba(234, 109, 136, 0.18), transparent 24rem),
-    radial-gradient(circle at 82% 24%, rgba(255, 207, 112, 0.18), transparent 28rem),
+    linear-gradient(115deg, rgba(21, 17, 13, 0.84), rgba(21, 17, 13, 0.94)),
+    radial-gradient(circle at 24% 18%, rgba(245, 154, 176, 0.16), transparent 24rem),
+    radial-gradient(circle at 82% 24%, rgba(255, 211, 138, 0.18), transparent 28rem),
     var(--bg);
 }
 
@@ -66,14 +69,14 @@ body.locked .site-shell {
 .auth-card {
   width: min(440px, 100%);
   position: relative;
-  padding: 34px 30px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 38px 30px 34px;
+  border: 1px solid rgba(255, 240, 215, 0.18);
+  border-radius: 18px;
   background:
-    linear-gradient(145deg, rgba(255, 207, 112, 0.08), transparent 36%),
-    rgba(27, 25, 22, 0.88);
+    linear-gradient(145deg, rgba(255, 211, 138, 0.12), transparent 38%),
+    rgba(31, 26, 21, 0.82);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(22px);
+  backdrop-filter: blur(24px);
   overflow: hidden;
 }
 
@@ -83,14 +86,16 @@ body.locked .site-shell {
   inset: 14px 14px auto auto;
   width: 74px;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent));
+  background: linear-gradient(90deg, transparent, rgba(255, 211, 138, 0.92));
 }
 
 .auth-card h1 {
-  margin-bottom: 16px;
-  font-size: clamp(34px, 8vw, 56px);
-  letter-spacing: 0.02em;
+  margin-bottom: 28px;
+  font-size: clamp(38px, 8vw, 58px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
   text-wrap: balance;
+  text-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
 }
 
 .auth-card p:not(.eyebrow) {
@@ -103,16 +108,16 @@ body.locked .site-shell {
   gap: 8px;
   margin: 22px 0 16px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .auth-card input {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 13px 14px;
+  border-radius: 14px;
+  padding: 14px 15px;
   outline: 0;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   font: inherit;
 }
@@ -143,7 +148,7 @@ body.locked .site-shell {
   display: grid;
   align-content: space-between;
   background-image:
-    linear-gradient(90deg, rgba(17, 16, 14, 0.94), rgba(17, 16, 14, 0.44) 48%, rgba(17, 16, 14, 0.22)),
+    linear-gradient(90deg, rgba(21, 17, 13, 0.92), rgba(21, 17, 13, 0.48) 48%, rgba(21, 17, 13, 0.18)),
     var(--hero-image);
   background-size: cover;
   background-position: var(--hero-position, center);
@@ -154,7 +159,7 @@ body.locked .site-shell {
   position: absolute;
   inset: auto 0 0;
   height: 34%;
-  background: linear-gradient(transparent, var(--bg));
+  background: linear-gradient(transparent, rgba(21, 17, 13, 0.96));
   pointer-events: none;
 }
 
@@ -169,7 +174,8 @@ body.locked .site-shell {
 
 .brand {
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  color: rgba(255, 246, 233, 0.88);
 }
 
 .nav-actions {
@@ -178,8 +184,8 @@ body.locked .site-shell {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(17, 16, 14, 0.45);
-  backdrop-filter: blur(18px);
+  background: rgba(31, 26, 21, 0.46);
+  backdrop-filter: blur(20px);
 }
 
 .nav-actions a,
@@ -187,7 +193,7 @@ body.locked .site-shell {
 .ghost-button,
 .primary-button {
   border-radius: 999px;
-  padding: 11px 16px;
+  padding: 12px 17px;
   font-size: 14px;
 }
 
@@ -217,7 +223,7 @@ body.locked .site-shell {
   align-items: center;
   gap: 10px;
   margin: 0 0 14px;
-  color: var(--accent);
+  color: #ffdda4;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -241,7 +247,8 @@ h1 {
   margin-bottom: 22px;
   font-size: clamp(42px, 7vw, 86px);
   line-height: 1.02;
-  letter-spacing: 0.02em;
+  font-weight: 900;
+  letter-spacing: 0.035em;
   text-wrap: balance;
 }
 
@@ -249,6 +256,8 @@ h2 {
   margin-bottom: 12px;
   font-size: clamp(28px, 4vw, 52px);
   line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 0.035em;
 }
 
 .hero-copy {
@@ -259,9 +268,10 @@ h2 {
 }
 
 .primary-button {
-  background: var(--accent);
-  color: #17120b;
+  background: linear-gradient(135deg, #ffe0a4, #ffc86f);
+  color: #22170d;
   font-weight: 800;
+  box-shadow: 0 12px 28px rgba(255, 200, 111, 0.18);
 }
 
 .ghost-button {
@@ -310,7 +320,7 @@ main {
   left: 4px;
   right: 4px;
   height: 2px;
-  background: linear-gradient(90deg, var(--accent), rgba(255, 248, 237, 0.12));
+  background: linear-gradient(90deg, rgba(255, 211, 138, 0.92), rgba(255, 248, 237, 0.1));
 }
 
 .timeline-item {
@@ -328,16 +338,17 @@ main {
   border: 3px solid var(--bg);
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 1px rgba(255, 207, 112, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 211, 138, 0.52), 0 0 18px rgba(255, 211, 138, 0.22);
 }
 
 .timeline-card,
 .album-card,
 .photo-card {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
   overflow: hidden;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.18);
 }
 
 .clickable-card {
@@ -353,7 +364,7 @@ main {
 .timeline-card {
   min-height: 360px;
   background:
-    linear-gradient(180deg, rgba(255, 248, 237, 0.04), transparent 48%),
+    linear-gradient(180deg, rgba(255, 240, 215, 0.06), transparent 48%),
     var(--panel);
 }
 
@@ -393,7 +404,7 @@ main {
   gap: 6px;
   border-radius: 999px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 240, 215, 0.09);
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
@@ -476,7 +487,7 @@ main {
   display: block;
   width: 100%;
   min-height: 180px;
-  background: #080807;
+  background: #100d0a;
 }
 
 .photo-card img:not([src]) {
@@ -522,9 +533,9 @@ main {
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid rgba(255, 248, 237, 0.2);
+  border: 1px solid rgba(255, 240, 215, 0.2);
   border-radius: 999px;
-  background: rgba(17, 16, 14, 0.72);
+  background: rgba(31, 26, 21, 0.72);
   color: var(--accent);
   cursor: pointer;
   font: inherit;
@@ -555,9 +566,9 @@ main {
   display: none;
   margin-right: 46px;
   padding: 8px;
-  border: 1px solid rgba(255, 248, 237, 0.14);
-  border-radius: 8px;
-  background: rgba(17, 16, 14, 0.78);
+  border: 1px solid rgba(255, 240, 215, 0.16);
+  border-radius: 12px;
+  background: rgba(31, 26, 21, 0.8);
   pointer-events: auto;
   backdrop-filter: blur(16px);
 }
@@ -572,10 +583,10 @@ main {
   min-height: 48px;
   resize: vertical;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 9px 10px;
   outline: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 240, 215, 0.06);
   color: var(--text);
   font: inherit;
   line-height: 1.55;
@@ -604,10 +615,10 @@ main {
 }
 
 .upload-toggle {
-  border: 1px solid rgba(255, 248, 237, 0.16);
+  border: 1px solid rgba(255, 240, 215, 0.16);
   border-radius: 999px;
   padding: 9px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 240, 215, 0.04);
   color: var(--muted);
   cursor: pointer;
   font: inherit;
@@ -626,14 +637,14 @@ main {
   gap: 12px;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
 }
 
 .local-album-form input {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
@@ -651,8 +662,8 @@ main {
   max-height: 92vh;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #0b0a09;
+  border-radius: 14px;
+  background: #100d0a;
   color: var(--text);
 }
 
