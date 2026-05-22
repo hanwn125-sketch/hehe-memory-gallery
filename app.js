@@ -1,5 +1,6 @@
 const AUTH_KEY = "hehe-gallery-auth-v2";
 const LOCAL_ALBUMS_KEY = "hehe-local-albums-v1";
+const MEMORY_NOTES_KEY = "hehe-memory-notes-v1";
 
 const state = {
   data: null,
@@ -80,6 +81,24 @@ const loadLocalAlbums = () => {
 
 const saveLocalAlbums = (albums) => {
   localStorage.setItem(LOCAL_ALBUMS_KEY, JSON.stringify(albums));
+};
+
+const loadMemoryNotes = () => {
+  try {
+    return JSON.parse(localStorage.getItem(MEMORY_NOTES_KEY) || "{}");
+  } catch {
+    return {};
+  }
+};
+
+const saveMemoryNote = (id, value) => {
+  const notes = loadMemoryNotes();
+  if (value.trim()) {
+    notes[id] = value;
+  } else {
+    delete notes[id];
+  }
+  localStorage.setItem(MEMORY_NOTES_KEY, JSON.stringify(notes));
 };
 
 const mergeLocalAlbums = () => {
@@ -356,18 +375,22 @@ const renderGallery = () => {
   const items = flattenItems(state.data.albums).filter(itemMatches);
   const album = currentAlbum();
   const activeText = album
-    ? `正在浏览「${album.title}」合集 · ${items.length} 张`
+    ? `${items.length} 张`
     : state.category === "全部"
-      ? `正在浏览全部记忆 · ${items.length} 张`
-      : `正在浏览「${state.category}」· ${items.length} 张`;
+      ? `${items.length} 张`
+      : `${state.category} · ${items.length} 张`;
+  setText("gallery-title", album?.title || "照片墙");
   setText("active-filter", activeText);
+  const notes = loadMemoryNotes();
 
   masonry.innerHTML = items
     .map(
       (item) => `
         <figure class="photo-card" tabindex="0" data-id="${item.id}">
           ${mediaMarkup(item)}
-          <figcaption>${formatDate(item.date)}</figcaption>
+          <figcaption>
+            <textarea class="memory-note" data-note-id="${item.id}" rows="2" placeholder="给这张照片留一句回忆">${notes[item.id] || ""}</textarea>
+          </figcaption>
         </figure>
       `,
     )
@@ -377,6 +400,13 @@ const renderGallery = () => {
     card.addEventListener("click", () => openLightbox(card.dataset.id));
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter") openLightbox(card.dataset.id);
+    });
+  });
+  masonry.querySelectorAll(".memory-note").forEach((input) => {
+    input.addEventListener("click", (event) => event.stopPropagation());
+    input.addEventListener("keydown", (event) => event.stopPropagation());
+    input.addEventListener("input", (event) => {
+      saveMemoryNote(event.currentTarget.dataset.noteId, event.currentTarget.value);
     });
   });
   observeGalleryMedia();
