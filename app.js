@@ -9,6 +9,8 @@ const state = {
   query: "",
   initialized: false,
   key: null,
+  apiPassword: "",
+  notes: {},
   objectUrls: [],
   galleryObserver: null,
 };
@@ -50,9 +52,11 @@ const decryptAssetUrl = async (item) => {
   if (!item.encryptedSrc) item.encryptedSrc = item.src;
 
   item.decrypting = (async () => {
-    const bytes = await decryptBytes(state.key, await fetchEncrypted(item.encryptedSrc));
     const mime = item.type === "video" ? "video/mp4" : "image/jpeg";
-    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const bytes = item.remote
+      ? new Uint8Array(await (await apiFetch(item.apiSrc)).arrayBuffer())
+      : await decryptBytes(state.key, await fetchEncrypted(item.encryptedSrc));
+    const url = URL.createObjectURL(new Blob([bytes], { type: item.mime || mime }));
     state.objectUrls.push(url);
     item.src = url;
     item.decrypted = true;
@@ -83,22 +87,65 @@ const saveLocalAlbums = (albums) => {
   localStorage.setItem(LOCAL_ALBUMS_KEY, JSON.stringify(albums));
 };
 
+const apiFetch = async (path, options = {}) => {
+  const headers = new Headers(options.headers || {});
+  if (state.apiPassword) headers.set("X-Site-Password", state.apiPassword);
+  const response = await fetch(path, { ...options, headers });
+  if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+  return response;
+};
+
 const loadMemoryNotes = () => {
   try {
-    return JSON.parse(localStorage.getItem(MEMORY_NOTES_KEY) || "{}");
+    return { ...JSON.parse(localStorage.getItem(MEMORY_NOTES_KEY) || "{}"), ...state.notes };
   } catch {
-    return {};
+    return { ...state.notes };
   }
 };
 
-const saveMemoryNote = (id, value) => {
-  const notes = loadMemoryNotes();
+const saveMemoryNote = async (id, value) => {
+  const notes = JSON.parse(localStorage.getItem(MEMORY_NOTES_KEY) || "{}");
   if (value.trim()) {
     notes[id] = value;
+    state.notes[id] = value;
   } else {
     delete notes[id];
+    delete state.notes[id];
   }
   localStorage.setItem(MEMORY_NOTES_KEY, JSON.stringify(notes));
+
+  try {
+    await apiFetch(`/api/notes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: value }),
+    });
+  } catch {
+    // GitHub Pages has no backend; local save is still useful there.
+  }
+};
+
+const loadRemoteNotes = async () => {
+  try {
+    const response = await apiFetch("/api/notes");
+    state.notes = await response.json();
+  } catch {
+    state.notes = {};
+  }
+};
+
+const loadRemoteAlbums = async () => {
+  try {
+    const response = await apiFetch("/api/albums");
+    const albums = await response.json();
+    if (!Array.isArray(albums) || !albums.length) return;
+    state.data.albums = [...albums, ...state.data.albums.filter((album) => !album.remote)];
+    if (!state.data.categories.some((item) => item.name === "她的上传")) {
+      state.data.categories.push({ name: "她的上传", count: albums.reduce((sum, album) => sum + album.count, 0) });
+    }
+  } catch {
+    // Remote interaction is optional until Cloudflare bindings are configured.
+  }
 };
 
 const mergeLocalAlbums = () => {
@@ -133,9 +180,12 @@ const showGallery = async (password) => {
   const configResponse = await fetch("secure/config.json", { cache: "no-store" });
   if (!configResponse.ok) throw new Error("找不到加密配置。");
   const config = await configResponse.json();
+  state.apiPassword = password;
   state.key = await deriveKey(password, base64ToBytes(config.salt), config.iterations);
   state.data = await decryptJson(state.key, config.manifest);
   prepareEncryptedItems();
+  await loadRemoteNotes();
+  await loadRemoteAlbums();
   mergeLocalAlbums();
   await decryptInitialCovers();
 
@@ -153,6 +203,8 @@ const lockGallery = () => {
   state.objectUrls = [];
   state.data = null;
   state.key = null;
+  state.apiPassword = "";
+  state.notes = {};
   state.initialized = false;
   document.body.classList.add("locked");
   document.getElementById("auth-gate").setAttribute("aria-hidden", "false");
@@ -388,8 +440,11 @@ const renderGallery = () => {
       (item) => `
         <figure class="photo-card" tabindex="0" data-id="${item.id}">
           ${mediaMarkup(item)}
-          <figcaption>
-            <textarea class="memory-note" data-note-id="${item.id}" rows="2" placeholder="给这张照片留一句回忆">${notes[item.id] || ""}</textarea>
+          <figcaption class="note-panel${notes[item.id] ? " has-note" : ""}">
+            <button class="note-toggle" type="button" data-note-toggle="${item.id}" aria-label="给这张照片留言">✎</button>
+            <div class="note-editor">
+              <textarea class="memory-note" data-note-id="${item.id}" rows="2" placeholder="给这张照片留一句回忆">${notes[item.id] || ""}</textarea>
+            </div>
           </figcaption>
         </figure>
       `,
@@ -402,10 +457,21 @@ const renderGallery = () => {
       if (event.key === "Enter") openLightbox(card.dataset.id);
     });
   });
+  masonry.querySelectorAll(".note-toggle").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const panel = event.currentTarget.closest(".note-panel");
+      panel.classList.toggle("note-open");
+      if (panel.classList.contains("note-open")) {
+        panel.querySelector(".memory-note").focus();
+      }
+    });
+  });
   masonry.querySelectorAll(".memory-note").forEach((input) => {
     input.addEventListener("click", (event) => event.stopPropagation());
     input.addEventListener("keydown", (event) => event.stopPropagation());
     input.addEventListener("input", (event) => {
+      event.currentTarget.closest(".note-panel").classList.toggle("has-note", Boolean(event.currentTarget.value.trim()));
       saveMemoryNote(event.currentTarget.dataset.noteId, event.currentTarget.value);
     });
   });
@@ -428,6 +494,16 @@ const openLightbox = async (id) => {
 };
 
 const addLocalAlbum = async (title, date, files) => {
+  const remoteAlbum = await addRemoteAlbum(title, date, files);
+  if (remoteAlbum) {
+    state.data.albums.unshift(remoteAlbum);
+    renderStats(state.data);
+    renderTimeline(state.data.albums);
+    renderChips(state.data);
+    selectAlbum(remoteAlbum.id);
+    return;
+  }
+
   const albumId = `local-${Date.now()}`;
   const items = await Promise.all(
     Array.from(files).map(async (file, index) => {
@@ -478,6 +554,19 @@ const addLocalAlbum = async (title, date, files) => {
   renderTimeline(state.data.albums);
   renderChips(state.data);
   selectAlbum(albumId);
+};
+
+const addRemoteAlbum = async (title, date, files) => {
+  try {
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("date", date || new Date().toISOString().slice(0, 10));
+    Array.from(files).forEach((file) => formData.append("files", file));
+    const response = await apiFetch("/api/albums", { method: "POST", body: formData });
+    return response.json();
+  } catch {
+    return null;
+  }
 };
 
 const bindGalleryEvents = () => {
