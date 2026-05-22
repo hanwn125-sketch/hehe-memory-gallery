@@ -30,6 +30,7 @@
             <a href="#timeline">时间线</a>
             <a href="#albums">相册</a>
             <a href="#gallery">照片墙</a>
+            <a href="#upload">上传</a>
             <button id="lock-button" type="button">锁定</button>
           </div>
         </nav>
@@ -59,8 +60,8 @@
 
         <section class="section-head">
           <p class="eyebrow">Mood Board</p>
-          <h2>不是普通网格，是你们的故事索引。</h2>
-          <p>首页保留三层信息：时间、主题和情绪。点开任意照片可以进入沉浸式查看，筛选则适合以后照片越来越多的时候快速定位。</p>
+          <h2>按时间走，也能一键钻进某个合集。</h2>
+          <p>时间轴和主题相册都可以点击，进入对应合集的照片墙。单张照片不显示文件名，只保留合集、日期和氛围。</p>
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
@@ -75,6 +76,7 @@
           <div>
             <p class="eyebrow">Gallery</p>
             <h2>照片墙</h2>
+            <p class="active-filter" id="active-filter">正在浏览全部记忆</p>
           </div>
           <div class="controls">
             <label class="search">
@@ -86,6 +88,20 @@
         </section>
 
         <section class="masonry" id="masonry" aria-live="polite"></section>
+
+        <section class="upload-panel" id="upload">
+          <div>
+            <p class="eyebrow">For Her</p>
+            <h2>她也可以建立自己的合集</h2>
+            <p>选择图片后，会在当前浏览器里生成一个本地合集并进入照片墙。图片不会上传到 GitHub，也不会被别人看到。</p>
+          </div>
+          <form id="local-album-form" class="local-album-form">
+            <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
+            <input id="local-album-date" type="date" />
+            <input id="local-album-files" type="file" accept="image/*" multiple required />
+            <button class="primary-button" type="submit">创建本地合集</button>
+          </form>
+        </section>
       </main>
     </div>
 
