@@ -598,23 +598,36 @@ main {
 
 .upload-panel {
   display: grid;
-  grid-template-columns: minmax(180px, 0.6fr) 1fr;
-  gap: 24px;
-  margin: 24px 0 72px;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
+  justify-items: center;
+  gap: 16px;
+  margin: 4px 0 72px;
 }
 
-.upload-panel p:not(.eyebrow) {
+.upload-toggle {
+  border: 1px solid rgba(255, 248, 237, 0.16);
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
-  line-height: 1.75;
+  cursor: pointer;
+  font: inherit;
+}
+
+.upload-toggle:hover,
+.upload-toggle[aria-expanded="true"] {
+  border-color: rgba(255, 207, 112, 0.48);
+  color: var(--accent);
+  background: rgba(255, 207, 112, 0.08);
 }
 
 .local-album-form {
   display: grid;
+  width: min(560px, 100%);
   gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
 }
 
 .local-album-form input {

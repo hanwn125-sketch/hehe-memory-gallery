@@ -553,6 +553,14 @@ const addRemoteAlbum = async (title, date, files) => {
 };
 
 const bindGalleryEvents = () => {
+  const uploadToggle = document.getElementById("upload-toggle");
+  const uploadForm = document.getElementById("local-album-form");
+  uploadToggle.addEventListener("click", () => {
+    const isOpen = uploadToggle.getAttribute("aria-expanded") === "true";
+    uploadToggle.setAttribute("aria-expanded", String(!isOpen));
+    uploadForm.hidden = isOpen;
+  });
+
   document.getElementById("close-lightbox").addEventListener("click", () => {
     document.getElementById("lightbox").close();
   });
@@ -564,6 +572,8 @@ const bindGalleryEvents = () => {
     const files = document.getElementById("local-album-files").files;
     await addLocalAlbum(title || "她的新合集", date, files);
     event.currentTarget.reset();
+    uploadToggle.setAttribute("aria-expanded", "false");
+    uploadForm.hidden = true;
   });
 };
 

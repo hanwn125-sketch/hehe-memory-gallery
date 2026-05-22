@@ -45,11 +45,9 @@
         <section class="timeline" id="timeline" aria-label="时间线"></section>
 
         <section class="upload-panel" id="upload">
-          <div>
-            <h2>新合集</h2>
-          </div>
-          <form id="local-album-form" class="local-album-form">
-            <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
+          <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false">＋ 新合集</button>
+          <form id="local-album-form" class="local-album-form" hidden>
+            <input id="local-album-title" type="text" placeholder="合集名" required />
             <input id="local-album-date" type="date" />
             <input id="local-album-files" type="file" accept="image/*" multiple required />
             <button class="primary-button" type="submit">上传</button>
