@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "kdf": "PBKDF2-SHA256",
+  "cipher": "AES-256-GCM",
+  "iterations": 250000,
+  "salt": "kvcKZTopNcpTW1UhsADysw==",
+  "manifest": "secure/gallery.bin"
+}

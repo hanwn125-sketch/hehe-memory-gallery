@@ -1,0 +1,8 @@
+/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+
+# Netlify Pro/Enterprise can enable real HTTP Basic Auth for every file.
+# Remove the leading "#" below and change the password before deploying on a private repo.
+# /*
+#   Basic-Auth: hehe:CHANGE_ME

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>鹤鹤的记忆收藏馆</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="locked">
+    <section class="auth-gate" id="auth-gate" aria-label="访问验证">
+      <form class="auth-card" id="auth-form">
+        <p class="eyebrow">Private Archive</p>
+        <h1>鹤鹤的记忆收藏馆</h1>
+        <p>这是只给你们看的影像空间。输入访问密码后，就可以打开时间线和照片墙。</p>
+        <label>
+          <span>访问密码</span>
+          <input id="password-input" type="password" autocomplete="current-password" placeholder="输入密码" required />
+        </label>
+        <button class="primary-button" type="submit">进入相册</button>
+        <small id="auth-error" role="alert"></small>
+      </form>
+    </section>
+
+    <div class="site-shell" id="site-shell" aria-hidden="true">
+      <header class="hero" id="hero">
+        <nav class="topbar">
+          <a class="brand" href="#top" aria-label="回到顶部">Hehe Archive</a>
+          <div class="nav-actions">
+            <a href="#timeline">时间线</a>
+            <a href="#albums">相册</a>
+            <a href="#gallery">照片墙</a>
+            <button id="lock-button" type="button">锁定</button>
+          </div>
+        </nav>
+        <section class="hero-inner" id="top">
+          <p class="eyebrow">给鹤鹤的私人影像馆</p>
+          <h1>把每一次见面，排成一条会发光的时间线。</h1>
+          <p class="hero-copy">照片按年份、主题、地点和情绪自动整理；既能像 Notion 卡片一样快速筛选，也能像一本纪念册一样慢慢翻。</p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#gallery">开始浏览</a>
+            <a class="ghost-button" href="#albums">查看主题</a>
+          </div>
+        </section>
+        <aside class="hero-card" aria-label="相册统计">
+          <span>当前整理</span>
+          <strong id="hero-count">加载中...</strong>
+          <small id="hero-subtitle">正在读取鹤鹤素材</small>
+        </aside>
+      </header>
+
+      <main>
+        <section class="overview" aria-label="概览">
+          <div class="stat"><strong id="stat-albums">0</strong><span>个主题</span></div>
+          <div class="stat"><strong id="stat-photos">0</strong><span>张照片</span></div>
+          <div class="stat"><strong id="stat-videos">0</strong><span>个视频</span></div>
+          <div class="stat"><strong id="stat-skipped">0</strong><span>份原片/归档</span></div>
+        </section>
+
+        <section class="section-head">
+          <p class="eyebrow">Mood Board</p>
+          <h2>不是普通网格，是你们的故事索引。</h2>
+          <p>首页保留三层信息：时间、主题和情绪。点开任意照片可以进入沉浸式查看，筛选则适合以后照片越来越多的时候快速定位。</p>
+        </section>
+
+        <section class="timeline" id="timeline" aria-label="时间线"></section>
+
+        <section class="section-head" id="albums">
+          <p class="eyebrow">Albums</p>
+          <h2>主题相册</h2>
+        </section>
+        <section class="album-grid" id="album-grid" aria-label="主题相册列表"></section>
+
+        <section class="toolbar" id="gallery">
+          <div>
+            <p class="eyebrow">Gallery</p>
+            <h2>照片墙</h2>
+          </div>
+          <div class="controls">
+            <label class="search">
+              <span>搜索</span>
+              <input id="search-input" type="search" placeholder="地点 / 文件名 / 主题" />
+            </label>
+            <div class="chips" id="filter-chips" aria-label="分类筛选"></div>
+          </div>
+        </section>
+
+        <section class="masonry" id="masonry" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <dialog class="lightbox" id="lightbox">
+      <button class="close-button" id="close-lightbox" type="button" aria-label="关闭">×</button>
+      <div class="lightbox-media" id="lightbox-media"></div>
+      <div class="lightbox-meta">
+        <strong id="lightbox-title"></strong>
+        <span id="lightbox-detail"></span>
+      </div>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
