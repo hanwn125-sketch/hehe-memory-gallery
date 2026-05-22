@@ -25,43 +25,25 @@
     <div class="site-shell" id="site-shell" aria-hidden="true">
       <header class="hero" id="hero">
         <nav class="topbar">
-          <a class="brand" href="#top" aria-label="回到顶部">Hehe Archive</a>
+          <a class="brand" href="#top" aria-label="回到顶部">Time Album</a>
           <div class="nav-actions">
             <a href="#timeline">时间线</a>
-            <a href="#albums">相册</a>
-            <a href="#gallery">照片墙</a>
             <a href="#upload">上传</a>
             <button id="lock-button" type="button">锁定</button>
           </div>
         </nav>
         <section class="hero-inner" id="top">
-          <p class="eyebrow">给鹤鹤的私人影像馆</p>
-          <h1>把每一次见面，排成一条会发光的时间线。</h1>
-          <p class="hero-copy">照片按年份、主题、地点和情绪自动整理；既能像 Notion 卡片一样快速筛选，也能像一本纪念册一样慢慢翻。</p>
-          <div class="hero-actions">
-            <a class="primary-button" href="#gallery">开始浏览</a>
-            <a class="ghost-button" href="#albums">查看主题</a>
-          </div>
+          <p class="eyebrow">小田和小韩</p>
+          <h1>小田和小韩的时光纪念册</h1>
+          <p class="hero-copy">把一起走过的日子，按时间收进一条可以慢慢翻看的轴里。</p>
         </section>
-        <aside class="hero-card" aria-label="相册统计">
-          <span>当前整理</span>
-          <strong id="hero-count">加载中...</strong>
-          <small id="hero-subtitle">正在读取鹤鹤素材</small>
-        </aside>
       </header>
 
       <main>
-        <section class="overview" aria-label="概览">
-          <div class="stat"><strong id="stat-albums">0</strong><span>个主题</span></div>
-          <div class="stat"><strong id="stat-photos">0</strong><span>张照片</span></div>
-          <div class="stat"><strong id="stat-videos">0</strong><span>个视频</span></div>
-          <div class="stat"><strong id="stat-skipped">0</strong><span>份原片/归档</span></div>
-        </section>
-
         <section class="section-head">
           <p class="eyebrow">Timeline</p>
-          <h2>按时间轴走，每个节点都是一个合集。</h2>
-          <p>先选择一个时间节点或本地合集，再进入对应照片墙。单张照片不显示文件名，只保留合集、日期和氛围。</p>
+          <h2>时间轴</h2>
+          <p>横向滑动时间轴，点击任意合集进入照片墙。</p>
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
@@ -69,7 +51,7 @@
         <section class="upload-panel" id="upload">
           <div>
             <p class="eyebrow">For Her</p>
-            <h2>她也可以建立自己的本地合集</h2>
+            <h2>建立本地合集</h2>
             <p>选择图片后，会在当前浏览器里生成一个本地合集并加入时间轴。图片不会上传到 GitHub，也不会被别人看到。</p>
           </div>
           <form id="local-album-form" class="local-album-form">

@@ -161,7 +161,8 @@ const flattenItems = (albums) =>
   );
 
 const setText = (id, text) => {
-  document.getElementById(id).textContent = text;
+  const element = document.getElementById(id);
+  if (element) element.textContent = text;
 };
 
 const currentAlbum = () => {
@@ -185,13 +186,6 @@ const selectAlbum = (albumId) => {
 };
 
 const renderStats = (data) => {
-  setText("hero-count", `${data.stats.displayItems} 份记忆`);
-  setText("hero-subtitle", `${data.stats.albums} 个主题，${data.stats.photos} 张照片，${data.stats.videos} 个视频`);
-  setText("stat-albums", data.stats.albums);
-  setText("stat-photos", data.stats.photos);
-  setText("stat-videos", data.stats.videos);
-  setText("stat-skipped", data.stats.skipped);
-
   const heroAlbum =
     data.albums
       .filter((album) => album.cover && album.date)
@@ -222,6 +216,8 @@ const renderTimeline = (albums) => {
         <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
           <div class="timeline-dot"></div>
           <div class="timeline-card">
+            <img src="${(album.items.find((item) => item.type === "image") || album.items[0]).src}" alt="${album.title}" loading="lazy" />
+            <div class="timeline-body">
             <span class="date">${formatDate(album.date)}</span>
             <h3>${album.title}</h3>
             <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
@@ -229,6 +225,7 @@ const renderTimeline = (albums) => {
               ${tag(album.category)}
               ${tag(album.mood)}
               ${album.videos ? tag(`${album.videos} 个视频`) : ""}
+            </div>
             </div>
           </div>
         </article>
