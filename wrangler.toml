@@ -1,5 +1,8 @@
 name = "hehe-memory-gallery"
 compatibility_date = "2026-05-21"
+pages_build_output_dir = "./out"
 
-[assets]
-directory = "./out"
+[[d1_databases]]
+binding = "DB"
+database_name = "hehe_memory_gallery"
+database_id = "8e4af009-b483-4ba7-b35a-7e4bfd374aa8"

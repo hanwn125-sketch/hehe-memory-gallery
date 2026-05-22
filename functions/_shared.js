@@ -8,8 +8,8 @@ export const json = (data, init = {}) =>
   });
 
 export const requireAuth = (request, env) => {
-  const expected = env.ACCESS_PASSWORD;
-  const actual = request.headers.get("X-Site-Password") || "";
+  const expected = String(env.ACCESS_PASSWORD || "").trim();
+  const actual = String(request.headers.get("X-Site-Password") || "").trim();
   return Boolean(expected && actual && actual === expected);
 };
 
