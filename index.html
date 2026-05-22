@@ -10,14 +10,12 @@
   <body class="locked">
     <section class="auth-gate" id="auth-gate" aria-label="访问验证">
       <form class="auth-card" id="auth-form">
-        <p class="eyebrow">只给彼此</p>
         <h1>小田和小韩的时光纪念册</h1>
-        <p>把密码填上，就把那些一起走过的日子轻轻打开。</p>
         <label>
-          <span>访问密码</span>
-          <input id="password-input" type="password" autocomplete="current-password" placeholder="输入你们知道的密码" required />
+          <span>密码</span>
+          <input id="password-input" type="password" autocomplete="current-password" placeholder="输入密码" required />
         </label>
-        <button class="primary-button" type="submit">进入相册</button>
+        <button class="primary-button" type="submit">进入</button>
         <small id="auth-error" role="alert"></small>
       </form>
     </section>
@@ -35,38 +33,33 @@
         <section class="hero-inner" id="top">
           <p class="eyebrow">小田和小韩</p>
           <h1>小田和小韩的时光纪念册</h1>
-          <p class="hero-copy">把一起走过的日子，按时间收进一条可以慢慢翻看的轴里。</p>
+          <p class="hero-copy">慢慢翻。</p>
         </section>
       </header>
 
       <main>
         <section class="section-head">
-          <p class="eyebrow">时间线</p>
           <h2>时间线</h2>
-          <p>点击任意合集进入对应的照片墙。</p>
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
 
         <section class="upload-panel" id="upload">
           <div>
-            <p class="eyebrow">她的新合集</p>
-            <h2>上传新合集</h2>
-            <p>现在用 Cloudflare KV 保存她上传的新照片，D1 保存相册和留言；如果网络上传失败，会自动退回本地预览。</p>
+            <h2>新合集</h2>
           </div>
           <form id="local-album-form" class="local-album-form">
             <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
             <input id="local-album-date" type="date" />
             <input id="local-album-files" type="file" accept="image/*" multiple required />
-            <button class="primary-button" type="submit">创建本地合集</button>
+            <button class="primary-button" type="submit">上传</button>
           </form>
         </section>
 
         <section class="toolbar gallery-panel" id="gallery" hidden>
           <div>
-            <p class="eyebrow">照片墙</p>
             <h2 id="gallery-title">选择一个合集</h2>
-            <p class="active-filter" id="active-filter">选择时间线节点后打开照片墙。</p>
+            <p class="active-filter" id="active-filter"></p>
           </div>
         </section>
 

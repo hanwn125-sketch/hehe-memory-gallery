@@ -280,7 +280,7 @@ main {
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  margin: 78px 0 24px;
+  margin: 64px 0 20px;
 }
 
 .section-head {
@@ -598,10 +598,10 @@ main {
 
 .upload-panel {
   display: grid;
-  grid-template-columns: 1fr minmax(280px, 420px);
+  grid-template-columns: minmax(180px, 0.6fr) 1fr;
   gap: 24px;
   margin: 24px 0 72px;
-  padding: 28px;
+  padding: 22px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);

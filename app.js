@@ -176,7 +176,7 @@ const decryptInitialCovers = async () => {
 };
 
 const showGallery = async (password) => {
-  document.getElementById("auth-error").textContent = "正在解锁相册...";
+  document.getElementById("auth-error").textContent = "";
   const configResponse = await fetch("secure/config.json", { cache: "no-store" });
   if (!configResponse.ok) throw new Error("找不到加密配置。");
   const config = await configResponse.json();
@@ -224,7 +224,7 @@ const bindAuth = () => {
     try {
       await showGallery(input.value);
     } catch {
-      error.textContent = "密码不对，或者加密文件读取失败。";
+      error.textContent = "密码不对";
       input.select();
     }
   });
@@ -412,10 +412,10 @@ const renderGallery = () => {
   const items = flattenItems(state.data.albums).filter(itemMatches);
   const album = currentAlbum();
   const activeText = album
-    ? `${items.length} 张`
+    ? `${items.length} 张照片`
     : state.category === "全部"
-      ? `${items.length} 张`
-      : `${state.category} · ${items.length} 张`;
+      ? ""
+      : `${state.category} · ${items.length} 张照片`;
   setText("gallery-title", album?.title || "照片墙");
   setText("active-filter", activeText);
   const notes = loadMemoryNotes();
