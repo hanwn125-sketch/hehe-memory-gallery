@@ -9,6 +9,7 @@ const state = {
   initialized: false,
   key: null,
   objectUrls: [],
+  galleryObserver: null,
 };
 
 const base64ToBytes = (value) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
@@ -43,15 +44,22 @@ const decryptJson = async (key, path) => {
 };
 
 const decryptAssetUrl = async (item) => {
-  if (item.decrypted) return item.src;
+  if (item.decrypted || item.local) return item.src;
+  if (item.decrypting) return item.decrypting;
   if (!item.encryptedSrc) item.encryptedSrc = item.src;
-  const bytes = await decryptBytes(state.key, await fetchEncrypted(item.encryptedSrc));
-  const mime = item.type === "video" ? "video/mp4" : "image/jpeg";
-  const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
-  state.objectUrls.push(url);
-  item.src = url;
-  item.decrypted = true;
-  return url;
+
+  item.decrypting = (async () => {
+    const bytes = await decryptBytes(state.key, await fetchEncrypted(item.encryptedSrc));
+    const mime = item.type === "video" ? "video/mp4" : "image/jpeg";
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    state.objectUrls.push(url);
+    item.src = url;
+    item.decrypted = true;
+    item.decrypting = null;
+    return url;
+  })();
+
+  return item.decrypting;
 };
 
 const fileToDataUrl = (file) =>
@@ -117,9 +125,7 @@ const showGallery = async (password) => {
   document.getElementById("auth-gate").setAttribute("aria-hidden", "true");
   document.getElementById("site-shell").setAttribute("aria-hidden", "false");
 
-  if (!state.initialized) {
-    initGallery();
-  }
+  if (!state.initialized) initGallery();
 };
 
 const lockGallery = () => {
@@ -168,14 +174,14 @@ const formatDate = (value) => {
 
 const flattenItems = (albums) =>
   albums.flatMap((album) =>
-    album.items.map((item) => ({
-      ...item,
-      albumId: album.id,
-      albumTitle: album.title,
-      category: album.category,
-      mood: album.mood,
-      place: album.place,
-    })),
+    album.items.map((item) => {
+      item.albumId = album.id;
+      item.albumTitle = album.title;
+      item.category = album.category;
+      item.mood = album.mood;
+      item.place = album.place;
+      return item;
+    }),
   );
 
 const setText = (id, text) => {
@@ -188,36 +194,37 @@ const currentAlbum = () => {
   return state.data.albums.find((album) => album.id === state.albumId) || null;
 };
 
+const findItemById = (id) => flattenItems(state.data.albums).find((item) => item.id === id);
+
 const jumpToGallery = () => {
   document.getElementById("gallery").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
-const selectAlbum = async (albumId) => {
+const selectAlbum = (albumId) => {
   state.albumId = albumId;
   state.category = "全部";
   document.querySelectorAll(".gallery-panel").forEach((element) => {
     element.hidden = false;
   });
-  const album = currentAlbum();
-  if (album) {
-    document.getElementById("active-filter").textContent = `正在打开「${album.title}」...`;
-    await Promise.all(album.items.map(decryptAssetUrl));
-  }
   renderChips(state.data);
   renderGallery();
   jumpToGallery();
 };
 
+const pickCoverItem = (album) => {
+  if (!album) return null;
+  return album.items.find((item) => item.type === "image") || album.items[0] || null;
+};
+
 const renderStats = (data) => {
   const heroAlbum =
-    data.albums
-      .filter((album) => album.cover && album.date)
-      .sort((a, b) => b.date.localeCompare(a.date))[0] ||
+    data.albums.find((album) => album.title.includes("日常")) ||
+    data.albums.find((album) => album.title.includes("甜甜")) ||
     data.albums.find((album) => album.cover) ||
     data.albums[0];
-  if (heroAlbum) {
-    const coverItem = heroAlbum.items.find((item) => item.originalPath && heroAlbum.cover.includes(item.originalPath.split("\\").pop()?.replace(/\.[^.]+$/, ""))) || heroAlbum.items.find((item) => item.type === "image");
-    document.getElementById("hero").style.setProperty("--hero-image", `url("${coverItem?.src || heroAlbum.items[0]?.src}")`);
+  const coverItem = pickCoverItem(heroAlbum);
+  if (coverItem?.src) {
+    document.getElementById("hero").style.setProperty("--hero-image", `url("${coverItem.src}")`);
   }
 };
 
@@ -234,55 +241,22 @@ const sortAlbums = (albums) =>
 const renderTimeline = (albums) => {
   const timeline = document.getElementById("timeline");
   timeline.innerHTML = sortAlbums(albums)
-    .map(
-      (album) => `
+    .map((album) => {
+      const cover = pickCoverItem(album);
+      return `
         <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
           <div class="timeline-dot"></div>
           <div class="timeline-card">
-            <img src="${(album.items.find((item) => item.type === "image") || album.items[0]).src}" alt="${album.title}" loading="lazy" />
+            ${cover ? `<img src="${cover.src}" alt="${album.title}" loading="lazy" />` : ""}
             <div class="timeline-body">
-            <span class="date">${formatDate(album.date)}</span>
-            <h3>${album.title}</h3>
-            <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
-            <div class="tag-row">
-              ${tag(album.category)}
-              ${tag(album.mood)}
-              ${album.videos ? tag(`${album.videos} 个视频`) : ""}
-            </div>
-            </div>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-
-  timeline.querySelectorAll("[data-album]").forEach((card) => {
-    card.addEventListener("click", async () => selectAlbum(card.dataset.album));
-    card.addEventListener("keydown", async (event) => {
-      if (event.key === "Enter") selectAlbum(card.dataset.album);
-    });
-  });
-};
-
-const renderAlbums = (albums) => {
-  const grid = document.getElementById("album-grid");
-  if (!grid) return;
-  grid.innerHTML = albums
-    .slice()
-    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
-    .map((album) => {
-      const cover = album.items.find((item) => item.type === "image") || album.items[0];
-      return `
-        <article class="album-card clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
-          <img src="${cover.src}" alt="${album.title}" loading="lazy" />
-          <div class="album-body">
-            <p class="eyebrow">${album.category}</p>
-            <h3>${album.title}</h3>
-            <p class="album-meta">${formatDate(album.date)}${album.place ? ` · ${album.place}` : ""}</p>
-            <div class="tag-row">
-              ${tag(`${album.photos} 张照片`)}
-              ${album.videos ? tag(`${album.videos} 个视频`) : ""}
-              ${tag(album.mood)}
+              <span class="date">${formatDate(album.date)}</span>
+              <h3>${album.title}</h3>
+              <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
+              <div class="tag-row">
+                ${tag(album.category)}
+                ${tag(album.mood)}
+                ${album.videos ? tag(`${album.videos} 个视频`) : ""}
+              </div>
             </div>
           </div>
         </article>
@@ -290,9 +264,9 @@ const renderAlbums = (albums) => {
     })
     .join("");
 
-  grid.querySelectorAll("[data-album]").forEach((card) => {
-    card.addEventListener("click", async () => selectAlbum(card.dataset.album));
-    card.addEventListener("keydown", async (event) => {
+  timeline.querySelectorAll("[data-album]").forEach((card) => {
+    card.addEventListener("click", () => selectAlbum(card.dataset.album));
+    card.addEventListener("keydown", (event) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
     });
   });
@@ -325,6 +299,58 @@ const itemMatches = (item) => {
   return albumMatch && categoryMatch && haystack.includes(query);
 };
 
+const mediaMarkup = (item) => {
+  const loaded = item.local || item.decrypted || item.src?.startsWith("data:") || item.src?.startsWith("blob:");
+  if (item.type === "video") {
+    return loaded
+      ? `<video src="${item.src}" muted controls preload="metadata"></video>`
+      : `<div class="media-placeholder" data-item-id="${item.id}">轻点后加载视频</div>`;
+  }
+  return `<img ${loaded ? `src="${item.src}"` : ""} data-item-id="${item.id}" alt="" loading="lazy" />`;
+};
+
+const loadGalleryMedia = async (element) => {
+  const item = findItemById(element.dataset.itemId);
+  if (!item || element.dataset.loading === "true") return;
+  element.dataset.loading = "true";
+  try {
+    const src = await decryptAssetUrl(item);
+    if (element.tagName === "IMG") {
+      element.src = src;
+    } else {
+      element.outerHTML = `<video src="${src}" muted controls preload="metadata"></video>`;
+    }
+  } catch {
+    element.classList.add("media-error");
+    element.textContent = "加载失败";
+  }
+};
+
+const observeGalleryMedia = () => {
+  const targets = document.querySelectorAll("#masonry [data-item-id]");
+  if (state.galleryObserver) state.galleryObserver.disconnect();
+
+  if (!("IntersectionObserver" in window)) {
+    targets.forEach((element) => loadGalleryMedia(element));
+    return;
+  }
+
+  state.galleryObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        state.galleryObserver.unobserve(entry.target);
+        loadGalleryMedia(entry.target);
+      });
+    },
+    { rootMargin: "600px 0px" },
+  );
+
+  targets.forEach((element) => {
+    if (!element.getAttribute("src")) state.galleryObserver.observe(element);
+  });
+};
+
 const renderGallery = () => {
   const masonry = document.getElementById("masonry");
   const items = flattenItems(state.data.albums).filter(itemMatches);
@@ -333,24 +359,18 @@ const renderGallery = () => {
     ? `正在浏览「${album.title}」合集 · ${items.length} 张`
     : state.category === "全部"
       ? `正在浏览全部记忆 · ${items.length} 张`
-      : `正在浏览「${state.category}」 · ${items.length} 张`;
+      : `正在浏览「${state.category}」· ${items.length} 张`;
   setText("active-filter", activeText);
 
   masonry.innerHTML = items
-    .map((item) => {
-      const media =
-        item.type === "video"
-          ? `<video src="${item.src}" muted controls preload="metadata"></video>`
-          : `<img src="${item.src}" alt="${item.title}" loading="lazy" />`;
-      return `
+    .map(
+      (item) => `
         <figure class="photo-card" tabindex="0" data-id="${item.id}">
-          ${media}
-          <figcaption>
-            ${item.albumTitle} · ${formatDate(item.date)}
-          </figcaption>
+          ${mediaMarkup(item)}
+          <figcaption>${formatDate(item.date)}</figcaption>
         </figure>
-      `;
-    })
+      `,
+    )
     .join("");
 
   masonry.querySelectorAll(".photo-card").forEach((card) => {
@@ -359,17 +379,19 @@ const renderGallery = () => {
       if (event.key === "Enter") openLightbox(card.dataset.id);
     });
   });
+  observeGalleryMedia();
 };
 
-const openLightbox = (id) => {
-  const item = flattenItems(state.data.albums).find((entry) => entry.id === id);
+const openLightbox = async (id) => {
+  const item = findItemById(id);
   if (!item) return;
 
+  const src = await decryptAssetUrl(item);
   const media = document.getElementById("lightbox-media");
   media.innerHTML =
     item.type === "video"
-      ? `<video src="${item.src}" controls autoplay></video>`
-      : `<img src="${item.src}" alt="${item.title}" />`;
+      ? `<video src="${src}" controls autoplay></video>`
+      : `<img src="${src}" alt="" />`;
   setText("lightbox-title", item.albumTitle);
   setText("lightbox-detail", `${formatDate(item.date)} · ${item.category}`);
   document.getElementById("lightbox").showModal();
@@ -377,19 +399,22 @@ const openLightbox = (id) => {
 
 const addLocalAlbum = async (title, date, files) => {
   const albumId = `local-${Date.now()}`;
-  const items = await Promise.all(Array.from(files).map(async (file, index) => {
-    const src = await fileToDataUrl(file);
-    return {
-      id: `${albumId}-${index + 1}`,
-      type: "image",
-      title: title,
-      src,
-      originalPath: "",
-      date: date || new Date().toISOString().slice(0, 10),
-      year: (date || new Date().toISOString()).slice(0, 4),
-      bytes: file.size,
-    };
-  }));
+  const items = await Promise.all(
+    Array.from(files).map(async (file, index) => {
+      const src = await fileToDataUrl(file);
+      return {
+        id: `${albumId}-${index + 1}`,
+        type: "image",
+        title,
+        src,
+        local: true,
+        originalPath: "",
+        date: date || new Date().toISOString().slice(0, 10),
+        year: (date || new Date().toISOString()).slice(0, 4),
+        bytes: file.size,
+      };
+    }),
+  );
 
   if (!items.length) return;
 
@@ -422,7 +447,7 @@ const addLocalAlbum = async (title, date, files) => {
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderChips(state.data);
-  await selectAlbum(albumId);
+  selectAlbum(albumId);
 };
 
 const bindGalleryEvents = () => {

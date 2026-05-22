@@ -10,12 +10,12 @@
   <body class="locked">
     <section class="auth-gate" id="auth-gate" aria-label="访问验证">
       <form class="auth-card" id="auth-form">
-        <p class="eyebrow">Private Archive</p>
+        <p class="eyebrow">只给彼此</p>
         <h1>小田和小韩的时光纪念册</h1>
-        <p>输入访问密码后，进入只属于你们的时间轴。</p>
+        <p>把密码填上，就把那些一起走过的日子轻轻打开。</p>
         <label>
           <span>访问密码</span>
-          <input id="password-input" type="password" autocomplete="current-password" placeholder="输入密码" required />
+          <input id="password-input" type="password" autocomplete="current-password" placeholder="输入你们知道的密码" required />
         </label>
         <button class="primary-button" type="submit">进入相册</button>
         <small id="auth-error" role="alert"></small>
@@ -25,7 +25,7 @@
     <div class="site-shell" id="site-shell" aria-hidden="true">
       <header class="hero" id="hero">
         <nav class="topbar">
-          <a class="brand" href="#top" aria-label="回到顶部">Time Album</a>
+          <a class="brand" href="#top" aria-label="回到顶部">时光纪念册</a>
           <div class="nav-actions">
             <a href="#timeline">时间线</a>
             <a href="#upload">上传</a>
@@ -41,18 +41,18 @@
 
       <main>
         <section class="section-head">
-          <p class="eyebrow">Timeline</p>
-          <h2>时间轴</h2>
-          <p>横向滑动时间轴，点击任意合集进入照片墙。</p>
+          <p class="eyebrow">时间线</p>
+          <h2>一条横着翻的回忆轴</h2>
+          <p>每一个节点都是一个主题相册，点进去后再进入对应的照片墙。</p>
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
 
         <section class="upload-panel" id="upload">
           <div>
-            <p class="eyebrow">For Her</p>
-            <h2>建立本地合集</h2>
-            <p>选择图片后，会在当前浏览器里生成一个本地合集并加入时间轴。图片不会上传到 GitHub，也不会被别人看到。</p>
+            <p class="eyebrow">她的新合集</p>
+            <h2>先建立本地合集</h2>
+            <p>现在可以在这台浏览器里添加照片，立即加入时间线预览。要让她在网页端上传并同步到 GitHub，需要再接一个安全的免费后端，不能把 GitHub 密钥直接放进网页。</p>
           </div>
           <form id="local-album-form" class="local-album-form">
             <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />
@@ -64,14 +64,14 @@
 
         <section class="toolbar gallery-panel" id="gallery" hidden>
           <div>
-            <p class="eyebrow">Gallery</p>
-            <h2>照片墙</h2>
-            <p class="active-filter" id="active-filter">正在浏览全部记忆</p>
+            <p class="eyebrow">照片墙</p>
+            <h2>只看这个合集</h2>
+            <p class="active-filter" id="active-filter">选择一个时间节点后，会在这里打开照片墙。</p>
           </div>
           <div class="controls">
             <label class="search">
               <span>搜索</span>
-              <input id="search-input" type="search" placeholder="地点 / 文件名 / 主题" />
+              <input id="search-input" type="search" placeholder="地点 / 主题 / 日期" />
             </label>
             <div class="chips" id="filter-chips" aria-label="分类筛选"></div>
           </div>
