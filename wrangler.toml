@@ -6,3 +6,7 @@ pages_build_output_dir = "./out"
 binding = "DB"
 database_name = "hehe_memory_gallery"
 database_id = "8e4af009-b483-4ba7-b35a-7e4bfd374aa8"
+
+[[kv_namespaces]]
+binding = "UPLOADS"
+id = "4d5012e6449044ac8851945ccc9222d6"

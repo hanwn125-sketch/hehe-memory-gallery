@@ -51,8 +51,8 @@
         <section class="upload-panel" id="upload">
           <div>
             <p class="eyebrow">她的新合集</p>
-            <h2>建立本地合集</h2>
-            <p>现在先不启用 R2，上传的照片会保存在当前浏览器里用于预览；照片留言会同步到线上，你和她都能看到。</p>
+            <h2>上传新合集</h2>
+            <p>现在用 Cloudflare KV 保存她上传的新照片，D1 保存相册和留言；如果网络上传失败，会自动退回本地预览。</p>
           </div>
           <form id="local-album-form" class="local-album-form">
             <input id="local-album-title" type="text" placeholder="合集名，例如：她的反击" required />

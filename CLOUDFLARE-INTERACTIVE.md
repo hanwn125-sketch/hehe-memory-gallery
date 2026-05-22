@@ -1,9 +1,9 @@
 # Cloudflare 互动版部署
 
-当前先部署不需要 R2 的互动版：
+当前部署的是不需要 R2 的互动版：
 
 - 照片留言：存在 D1 数据库，你和她都能看到。
-- 她上传的新合集：暂时保存在当前浏览器本地，不同步线上。
+- 她上传的新合集：照片存在 Cloudflare KV，相册信息存在 D1。
 
 ## 需要创建的 Cloudflare 资源
 
@@ -12,6 +12,7 @@
 3. Pages 环境变量：`ACCESS_PASSWORD`，填和网站访问密码相同的值。
 4. Pages 绑定：
    - D1 binding name: `DB`
+   - KV binding name: `UPLOADS`
 
 ## Pages 构建设置
 
@@ -48,4 +49,4 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 ```
 
-配置完成后重新部署 Pages，网页里的留言会自动从本地模式切到线上同步模式。以后如果能启用 R2，再把上传同步打开。
+配置完成后重新部署 Pages，网页里的留言和新上传合集会同步到线上。KV 适合轻量互动上传；以后如果启用 R2，再切换到更专业的图片存储。
