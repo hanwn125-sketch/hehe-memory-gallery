@@ -294,8 +294,12 @@ main {
 }
 
 .section-head {
-  display: block;
+  align-items: center;
   max-width: 860px;
+}
+
+.timeline-head {
+  max-width: none;
 }
 
 .section-head p:not(.eyebrow) {
@@ -611,7 +615,7 @@ main {
   display: grid;
   justify-items: center;
   gap: 16px;
-  margin: 4px 0 72px;
+  margin: -6px 0 12px;
 }
 
 .upload-toggle {
@@ -641,7 +645,8 @@ main {
   background: var(--panel);
 }
 
-.local-album-form input {
+.local-album-form input,
+.local-album-form select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -655,6 +660,51 @@ main {
   border: 0;
   cursor: pointer;
   font: inherit;
+}
+
+.local-album-form small {
+  min-height: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.subtle-action,
+.delete-photo {
+  border: 1px solid rgba(255, 240, 215, 0.16);
+  border-radius: 999px;
+  background: rgba(31, 26, 21, 0.5);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.subtle-action {
+  align-self: center;
+  padding: 8px 12px;
+}
+
+.delete-photo {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 160ms ease, transform 160ms ease;
+  transform: translateY(4px);
+}
+
+.photo-card:hover .delete-photo,
+.photo-card:focus-within .delete-photo {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.subtle-action:hover,
+.delete-photo:hover {
+  border-color: rgba(245, 154, 176, 0.5);
+  color: var(--accent-2);
 }
 
 .lightbox {

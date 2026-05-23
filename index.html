@@ -38,27 +38,34 @@
       </header>
 
       <main>
-        <section class="section-head">
+        <section class="section-head timeline-head">
           <h2>时间线</h2>
+          <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false">＋ 新合集</button>
         </section>
 
-        <section class="timeline" id="timeline" aria-label="时间线"></section>
-
         <section class="upload-panel" id="upload">
-          <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false">＋ 新合集</button>
           <form id="local-album-form" class="local-album-form" hidden>
+            <select id="upload-mode" aria-label="上传方式">
+              <option value="new">新合集</option>
+              <option value="existing">补充到已有合集</option>
+            </select>
+            <select id="existing-album" aria-label="选择合集" hidden></select>
             <input id="local-album-title" type="text" placeholder="合集名" required />
             <input id="local-album-date" type="date" />
             <input id="local-album-files" type="file" accept="image/*" multiple required />
             <button class="primary-button" type="submit">上传</button>
+            <small id="upload-status" aria-live="polite"></small>
           </form>
         </section>
+
+        <section class="timeline" id="timeline" aria-label="时间线"></section>
 
         <section class="toolbar gallery-panel" id="gallery" hidden>
           <div>
             <h2 id="gallery-title">选择一个合集</h2>
             <p class="active-filter" id="active-filter"></p>
           </div>
+          <button class="subtle-action" id="delete-uploaded-album" type="button" hidden>删除上传</button>
         </section>
 
         <section class="masonry gallery-panel" id="masonry" aria-live="polite" hidden></section>

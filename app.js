@@ -139,13 +139,28 @@ const loadRemoteAlbums = async () => {
     const response = await apiFetch("/api/albums");
     const albums = await response.json();
     if (!Array.isArray(albums) || !albums.length) return;
-    state.data.albums = [...albums, ...state.data.albums.filter((album) => !album.remote)];
+    albums.forEach(mergeRemoteAlbum);
     if (!state.data.categories.some((item) => item.name === "她的上传")) {
       state.data.categories.push({ name: "她的上传", count: albums.reduce((sum, album) => sum + album.count, 0) });
     }
   } catch {
     // Remote interaction is optional until Cloudflare bindings are configured.
   }
+};
+
+const mergeRemoteAlbum = (remoteAlbum) => {
+  const existing = state.data.albums.find((album) => album.id === remoteAlbum.id);
+  if (!existing) {
+    state.data.albums.unshift(remoteAlbum);
+    return remoteAlbum;
+  }
+
+  existing.items = [...existing.items.filter((item) => !item.remote), ...remoteAlbum.items];
+  existing.count = existing.items.length;
+  existing.photos = existing.items.filter((item) => item.type === "image").length;
+  existing.videos = existing.items.filter((item) => item.type === "video").length;
+  existing.remote = existing.remote || remoteAlbum.remote;
+  return existing;
 };
 
 const mergeLocalAlbums = () => {
@@ -217,15 +232,21 @@ const bindAuth = () => {
   const form = document.getElementById("auth-form");
   const input = document.getElementById("password-input");
   const error = document.getElementById("auth-error");
+  const submit = form.querySelector("button[type='submit']");
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     error.textContent = "";
+    submit.disabled = true;
+    submit.textContent = "正在进入";
     try {
       await showGallery(input.value);
     } catch {
       error.textContent = "密码不对";
       input.select();
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "进入";
     }
   });
 
@@ -279,6 +300,12 @@ const selectAlbum = (albumId) => {
   });
   renderGallery();
   jumpToGallery();
+};
+
+const refreshTimeline = () => {
+  renderStats(state.data);
+  renderTimeline(state.data.albums);
+  renderExistingAlbumOptions();
 };
 
 const pickCoverItem = (album) => {
@@ -341,6 +368,14 @@ const renderTimeline = (albums) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
     });
   });
+};
+
+const renderExistingAlbumOptions = () => {
+  const select = document.getElementById("existing-album");
+  if (!select || !state.data) return;
+  select.innerHTML = sortAlbums(state.data.albums)
+    .map((album) => `<option value="${album.id}">${album.title}</option>`)
+    .join("");
 };
 
 const itemMatches = (item) => {
@@ -418,6 +453,9 @@ const renderGallery = () => {
       : `${state.category} · ${items.length} 张照片`;
   setText("gallery-title", album?.title || "照片墙");
   setText("active-filter", activeText);
+  const deleteAlbumButton = document.getElementById("delete-uploaded-album");
+  const hasRemoteItems = Boolean(album?.items.some((item) => item.remote));
+  deleteAlbumButton.hidden = !hasRemoteItems;
   const notes = loadMemoryNotes();
 
   masonry.innerHTML = items
@@ -427,6 +465,7 @@ const renderGallery = () => {
           ${mediaMarkup(item)}
           <figcaption class="note-panel${notes[item.id] ? " has-note" : ""}">
             <button class="note-toggle" type="button" data-note-toggle="${item.id}" aria-label="给这张照片留言">✎</button>
+            ${item.remote ? `<button class="delete-photo" type="button" data-delete-photo="${item.storageKey}" aria-label="删除这张上传照片">×</button>` : ""}
             <div class="note-editor">
               <textarea class="memory-note" data-note-id="${item.id}" rows="2" placeholder="给这张照片留一句回忆">${notes[item.id] || ""}</textarea>
             </div>
@@ -452,6 +491,12 @@ const renderGallery = () => {
       }
     });
   });
+  masonry.querySelectorAll(".delete-photo").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await deleteRemotePhoto(event.currentTarget.dataset.deletePhoto);
+    });
+  });
   masonry.querySelectorAll(".memory-note").forEach((input) => {
     input.addEventListener("click", (event) => event.stopPropagation());
     input.addEventListener("keydown", (event) => event.stopPropagation());
@@ -461,6 +506,46 @@ const renderGallery = () => {
     });
   });
   observeGalleryMedia();
+};
+
+const removeRemotePhotoLocally = (key) => {
+  state.data.albums = state.data.albums
+    .map((album) => {
+      album.items = album.items.filter((item) => item.storageKey !== key);
+      album.count = album.items.length;
+      album.photos = album.items.filter((item) => item.type === "image").length;
+      album.videos = album.items.filter((item) => item.type === "video").length;
+      return album;
+    })
+    .filter((album) => album.items.length || !album.remote);
+};
+
+const deleteRemotePhoto = async (key) => {
+  if (!key) return;
+  await apiFetch(`/api/assets/${encodeURIComponent(key)}`, { method: "DELETE" });
+  removeRemotePhotoLocally(key);
+  refreshTimeline();
+  renderGallery();
+};
+
+const deleteRemoteAlbum = async () => {
+  const album = currentAlbum();
+  if (!album) return;
+  await apiFetch(`/api/albums/${encodeURIComponent(album.id)}`, { method: "DELETE" });
+  if (album.remote) {
+    state.data.albums = state.data.albums.filter((entry) => entry.id !== album.id);
+    state.albumId = null;
+    document.querySelectorAll(".gallery-panel").forEach((element) => {
+      element.hidden = true;
+    });
+  } else {
+    album.items = album.items.filter((item) => !item.remote);
+    album.count = album.items.length;
+    album.photos = album.items.filter((item) => item.type === "image").length;
+    album.videos = album.items.filter((item) => item.type === "video").length;
+    renderGallery();
+  }
+  refreshTimeline();
 };
 
 const openLightbox = async (id) => {
@@ -478,22 +563,22 @@ const openLightbox = async (id) => {
   document.getElementById("lightbox").showModal();
 };
 
-const addLocalAlbum = async (title, date, files) => {
-  const remoteAlbum = await addRemoteAlbum(title, date, files);
+const addLocalAlbum = async (title, date, files, albumId = "") => {
+  const remoteAlbum = await addRemoteAlbum(title, date, files, albumId);
   if (remoteAlbum) {
-    state.data.albums.unshift(remoteAlbum);
-    renderStats(state.data);
-    renderTimeline(state.data.albums);
+    mergeRemoteAlbum(remoteAlbum);
+    refreshTimeline();
     selectAlbum(remoteAlbum.id);
     return;
   }
 
-  const albumId = `local-${Date.now()}`;
+  const targetAlbum = albumId ? state.data.albums.find((album) => album.id === albumId) : null;
+  const localAlbumId = targetAlbum?.id || `local-${Date.now()}`;
   const items = await Promise.all(
     Array.from(files).map(async (file, index) => {
       const src = await fileToDataUrl(file);
       return {
-        id: `${albumId}-${index + 1}`,
+        id: `${localAlbumId}-${Date.now()}-${index + 1}`,
         type: "image",
         title,
         src,
@@ -508,8 +593,17 @@ const addLocalAlbum = async (title, date, files) => {
 
   if (!items.length) return;
 
+  if (targetAlbum) {
+    targetAlbum.items.push(...items);
+    targetAlbum.count = targetAlbum.items.length;
+    targetAlbum.photos = targetAlbum.items.filter((item) => item.type === "image").length;
+    refreshTimeline();
+    selectAlbum(targetAlbum.id);
+    return;
+  }
+
   const album = {
-    id: albumId,
+    id: localAlbumId,
     local: true,
     sourceFolder: "local",
     title,
@@ -536,44 +630,86 @@ const addLocalAlbum = async (title, date, files) => {
   state.data.stats.displayItems += items.length;
   renderStats(state.data);
   renderTimeline(state.data.albums);
-  selectAlbum(albumId);
+  renderExistingAlbumOptions();
+  selectAlbum(localAlbumId);
 };
 
-const addRemoteAlbum = async (title, date, files) => {
-  try {
+const addRemoteAlbum = (title, date, files, albumId = "") =>
+  new Promise((resolve) => {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("date", date || new Date().toISOString().slice(0, 10));
+    if (albumId) formData.append("albumId", albumId);
     Array.from(files).forEach((file) => formData.append("files", file));
-    const response = await apiFetch("/api/albums", { method: "POST", body: formData });
-    return response.json();
-  } catch {
-    return null;
-  }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/albums");
+    xhr.setRequestHeader("X-Site-Password", state.apiPassword);
+    xhr.upload.addEventListener("progress", (event) => {
+      if (!event.lengthComputable) return;
+      setUploadStatus(`上传中 ${Math.round((event.loaded / event.total) * 100)}%`);
+    });
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        resolve(null);
+      }
+    });
+    xhr.addEventListener("error", () => resolve(null));
+    xhr.send(formData);
+  });
+
+const setUploadStatus = (text) => {
+  const status = document.getElementById("upload-status");
+  if (status) status.textContent = text;
 };
 
 const bindGalleryEvents = () => {
   const uploadToggle = document.getElementById("upload-toggle");
   const uploadForm = document.getElementById("local-album-form");
+  const uploadMode = document.getElementById("upload-mode");
+  const existingAlbum = document.getElementById("existing-album");
+  const titleInput = document.getElementById("local-album-title");
+  const dateInput = document.getElementById("local-album-date");
+
   uploadToggle.addEventListener("click", () => {
     const isOpen = uploadToggle.getAttribute("aria-expanded") === "true";
     uploadToggle.setAttribute("aria-expanded", String(!isOpen));
     uploadForm.hidden = isOpen;
   });
 
+  uploadMode.addEventListener("change", () => {
+    const useExisting = uploadMode.value === "existing";
+    existingAlbum.hidden = !useExisting;
+    titleInput.hidden = useExisting;
+    titleInput.required = !useExisting;
+    dateInput.hidden = useExisting;
+  });
+
   document.getElementById("close-lightbox").addEventListener("click", () => {
     document.getElementById("lightbox").close();
   });
 
+  document.getElementById("delete-uploaded-album").addEventListener("click", deleteRemoteAlbum);
+
   document.getElementById("local-album-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const title = document.getElementById("local-album-title").value.trim();
-    const date = document.getElementById("local-album-date").value;
+    const targetAlbum = uploadMode.value === "existing" ? state.data.albums.find((album) => album.id === existingAlbum.value) : null;
+    const title = targetAlbum?.title || titleInput.value.trim();
+    const date = targetAlbum?.date || dateInput.value;
     const files = document.getElementById("local-album-files").files;
-    await addLocalAlbum(title || "她的新合集", date, files);
+    if (!files.length) return;
+    setUploadStatus("准备上传...");
+    await addLocalAlbum(title || "她的新合集", date, files, targetAlbum?.id || "");
+    setUploadStatus("上传完成");
     event.currentTarget.reset();
+    uploadMode.dispatchEvent(new Event("change"));
     uploadToggle.setAttribute("aria-expanded", "false");
-    uploadForm.hidden = true;
+    setTimeout(() => {
+      uploadForm.hidden = true;
+      setUploadStatus("");
+    }, 800);
   });
 };
 
@@ -581,6 +717,7 @@ const initGallery = () => {
   bindGalleryEvents();
   renderStats(state.data);
   renderTimeline(state.data.albums);
+  renderExistingAlbumOptions();
   state.initialized = true;
   document.getElementById("auth-error").textContent = "";
 };

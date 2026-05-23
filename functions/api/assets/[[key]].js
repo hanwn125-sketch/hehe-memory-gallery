@@ -23,3 +23,15 @@ export async function onRequestGet({ request, env, params }) {
     },
   });
 }
+
+export async function onRequestDelete({ request, env, params }) {
+  if (!requireAuth(request, env)) return unauthorized();
+
+  const key = assetKey(params);
+  if (!key) return json({ error: "missing asset key" }, { status: 400 });
+
+  await env.UPLOADS.delete(key);
+  await env.DB.prepare("DELETE FROM notes WHERE item_id IN (SELECT id FROM photos WHERE r2_key = ?)").bind(key).run();
+  await env.DB.prepare("DELETE FROM photos WHERE r2_key = ?").bind(key).run();
+  return json({ ok: true });
+}

@@ -40,5 +40,8 @@ export const albumFromRows = (album, photos) => ({
     date: album.date,
     year: album.date?.slice(0, 4) || "",
     bytes: photo.size || 0,
+    storageKey: photo.r2_key,
+    remoteAlbumId: album.id,
+    remoteDeletable: true,
   })),
 });
