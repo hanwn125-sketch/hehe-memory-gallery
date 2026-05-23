@@ -14,6 +14,7 @@ const state = {
   hiddenAlbums: new Set(),
   hiddenPhotos: new Set(),
   covers: {},
+  albumDates: {},
   objectUrls: [],
   galleryObserver: null,
 };
@@ -211,11 +212,13 @@ const loadRemoteState = async () => {
     state.hiddenAlbums = new Set(remoteState.hiddenAlbums || []);
     state.hiddenPhotos = new Set(remoteState.hiddenPhotos || []);
     state.covers = remoteState.covers || {};
+    state.albumDates = remoteState.dates || {};
     applyRemoteState();
   } catch {
     state.hiddenAlbums = new Set();
     state.hiddenPhotos = new Set();
     state.covers = {};
+    state.albumDates = {};
   }
 };
 
@@ -224,6 +227,7 @@ const applyRemoteState = () => {
   state.data.albums = state.data.albums
     .filter((album) => !state.hiddenAlbums.has(album.id))
     .map((album) => {
+      album.date = state.albumDates[album.id] || album.date;
       album.items = album.items.filter((item) => !state.hiddenPhotos.has(item.id) && !state.hiddenPhotos.has(item.storageKey));
       album.count = album.items.length;
       album.photos = album.items.filter((item) => item.type === "image").length;
@@ -349,6 +353,7 @@ const lockGallery = () => {
   state.hiddenAlbums = new Set();
   state.hiddenPhotos = new Set();
   state.covers = {};
+  state.albumDates = {};
   state.initialized = false;
   document.body.classList.add("locked");
   document.getElementById("auth-gate").setAttribute("aria-hidden", "false");
@@ -383,7 +388,7 @@ const bindAuth = () => {
 };
 
 const formatDate = (value) => {
-  if (!value) return "日期待补充";
+  if (!value) return "补日期";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("zh-CN", {
@@ -481,7 +486,7 @@ const renderTimeline = (albums) => {
       return `
         <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
           <div class="timeline-dot"></div>
-          <span class="timeline-date">${formatDate(album.date)}</span>
+          <button class="timeline-date" type="button" data-edit-date="${album.id}" aria-label="修改${album.title}日期">${formatDate(album.date)}</button>
           <div class="timeline-card">
             ${cover ? `<img src="${cover.src}" alt="${album.title}" loading="lazy" />` : ""}
             <div class="timeline-body">
@@ -492,12 +497,26 @@ const renderTimeline = (albums) => {
         </article>
       `;
     })
-    .join("");
+    .join("") +
+    `
+      <article class="timeline-item timeline-add-item">
+        <button class="timeline-add-card" type="button" data-open-upload>
+          <span>＋</span>
+          <b>新合集</b>
+        </button>
+      </article>
+    `;
 
   timeline.querySelectorAll("[data-album]").forEach((card) => {
     card.addEventListener("click", () => selectAlbum(card.dataset.album));
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter") selectAlbum(card.dataset.album);
+    });
+  });
+  timeline.querySelectorAll("[data-edit-date]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await editAlbumDate(event.currentTarget.dataset.editDate);
     });
   });
 };
@@ -600,7 +619,7 @@ const renderGallery = () => {
     `
     : "";
 
-  masonry.innerHTML = addCard + items
+  masonry.innerHTML = items
     .map(
       (item) => `
         <figure class="photo-card" tabindex="0" data-id="${item.id}">
@@ -616,7 +635,7 @@ const renderGallery = () => {
         </figure>
       `,
     )
-    .join("");
+    .join("") + addCard;
 
   document.getElementById("masonry-add-photo")?.addEventListener("click", () => {
     document.getElementById("add-to-current-album").click();
@@ -727,6 +746,37 @@ const setAlbumCover = async (itemId) => {
   );
   albumIds.forEach((id) => {
     state.covers[id] = itemId;
+  });
+  refreshTimeline();
+};
+
+const editAlbumDate = async (albumId) => {
+  const album = state.data.albums.find((entry) => entry.id === albumId);
+  if (!album) return;
+  const value = window.prompt("输入日期，例如 2026-05-01", album.date || "");
+  if (value === null) return;
+  const date = value.trim();
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    window.alert("日期格式用 2026-05-01 这种。");
+    return;
+  }
+  const albumIds = album.sourceAlbumIds || [album.id];
+  await Promise.all(
+    albumIds.map((id) =>
+      apiFetch(`/api/dates/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date }),
+      }).catch(() => null),
+    ),
+  );
+  albumIds.forEach((id) => {
+    state.albumDates[id] = date;
+  });
+  album.date = date;
+  album.items.forEach((item) => {
+    item.date = date;
+    item.year = date.slice(0, 4);
   });
   refreshTimeline();
 };
@@ -878,6 +928,16 @@ const setUploadStatus = (text) => {
   if (status) status.textContent = text;
 };
 
+const openUploadForm = () => {
+  const uploadToggle = document.getElementById("upload-toggle");
+  const uploadForm = document.getElementById("local-album-form");
+  if (!uploadToggle || !uploadForm) return;
+  const isOpen = uploadToggle.getAttribute("aria-expanded") === "true";
+  uploadToggle.setAttribute("aria-expanded", String(!isOpen));
+  uploadForm.hidden = isOpen;
+  if (!isOpen) uploadForm.scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
 const bindGalleryEvents = () => {
   const uploadToggle = document.getElementById("upload-toggle");
   const uploadForm = document.getElementById("local-album-form");
@@ -886,10 +946,10 @@ const bindGalleryEvents = () => {
   const titleInput = document.getElementById("local-album-title");
   const dateInput = document.getElementById("local-album-date");
 
-  uploadToggle.addEventListener("click", () => {
-    const isOpen = uploadToggle.getAttribute("aria-expanded") === "true";
-    uploadToggle.setAttribute("aria-expanded", String(!isOpen));
-    uploadForm.hidden = isOpen;
+  uploadToggle.addEventListener("click", openUploadForm);
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-open-upload]")) openUploadForm();
   });
 
   uploadMode.addEventListener("change", () => {

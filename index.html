@@ -10,6 +10,11 @@
   <body class="locked">
     <section class="auth-gate" id="auth-gate" aria-label="访问验证">
       <form class="auth-card" id="auth-form">
+        <div class="line-dog auth-dog" aria-hidden="true">
+          <span class="dog-ear left"></span>
+          <span class="dog-ear right"></span>
+          <span class="dog-face"></span>
+        </div>
         <h1>小田和小韩的时光纪念册</h1>
         <label>
           <span>密码</span>
@@ -31,7 +36,11 @@
           </div>
         </nav>
         <section class="hero-inner" id="top">
-          <p class="eyebrow">小田和小韩</p>
+          <div class="line-dog hero-dog" aria-hidden="true">
+            <span class="dog-ear left"></span>
+            <span class="dog-ear right"></span>
+            <span class="dog-face"></span>
+          </div>
           <h1>小田和小韩的时光纪念册</h1>
           <p class="hero-copy">慢慢翻。</p>
         </section>
@@ -40,10 +49,10 @@
       <main>
         <section class="section-head timeline-head">
           <h2>时间线</h2>
-          <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false">＋ 新合集</button>
         </section>
 
         <section class="upload-panel" id="upload">
+          <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false" hidden>＋ 新合集</button>
           <form id="local-album-form" class="local-album-form" hidden>
             <select id="upload-mode" aria-label="上传方式">
               <option value="new">新合集</option>

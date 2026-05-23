@@ -20,6 +20,7 @@ export async function onRequestDelete({ request, env, params }) {
   await env.DB.prepare("DELETE FROM notes WHERE item_id IN (SELECT id FROM photos WHERE album_id = ?)").bind(id).run();
   await env.DB.prepare("DELETE FROM photos WHERE album_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM album_covers WHERE album_id = ?").bind(id).run();
+  await env.DB.prepare("DELETE FROM album_dates WHERE album_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM hidden_albums WHERE album_id = ?").bind(id).run();
   await env.DB.prepare("DELETE FROM albums WHERE id = ?").bind(id).run();
   return json({ ok: true });
