@@ -21,7 +21,15 @@ export async function onRequestPost({ request, env }) {
 
   if (!files.length) return json({ error: "missing images" }, { status: 400 });
 
-  const albumId = requestedAlbumId || crypto.randomUUID();
+  let albumId = requestedAlbumId;
+  if (!albumId) {
+    const existingAlbum = await env.DB.prepare(
+      "SELECT albums.id FROM albums LEFT JOIN hidden_albums ON hidden_albums.album_id = albums.id WHERE albums.title = ? AND hidden_albums.album_id IS NULL ORDER BY albums.created_at ASC LIMIT 1",
+    )
+      .bind(title)
+      .first();
+    albumId = existingAlbum?.id || crypto.randomUUID();
+  }
   const now = new Date().toISOString();
   await env.DB.prepare(
     "INSERT INTO albums (id, title, date, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, date = excluded.date",

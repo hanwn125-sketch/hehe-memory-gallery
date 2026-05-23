@@ -11,6 +11,9 @@ const state = {
   key: null,
   apiPassword: "",
   notes: {},
+  hiddenAlbums: new Set(),
+  hiddenPhotos: new Set(),
+  covers: {},
   objectUrls: [],
   galleryObserver: null,
 };
@@ -74,6 +77,59 @@ const fileToDataUrl = (file) =>
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+const normalizeTitle = (title) => String(title || "").trim().toLowerCase();
+
+const imageToUploadFile = (file, maxSize = 1800, quality = 0.82) =>
+  new Promise((resolve) => {
+    if (!file.type?.startsWith("image/")) {
+      resolve(file);
+      return;
+    }
+
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
+      if (scale >= 1 && file.size < 1.6 * 1024 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const name = file.name.replace(/\.[^.]+$/, "") || "photo";
+          resolve(new File([blob], `${name}.jpg`, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        quality,
+      );
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    image.src = url;
+  });
+
+const prepareUploadFiles = async (files) => {
+  const list = Array.from(files).filter((file) => file.type?.startsWith("image/"));
+  const prepared = [];
+  for (let index = 0; index < list.length; index += 1) {
+    setUploadStatus(`整理照片 ${index + 1}/${list.length}`);
+    prepared.push(await imageToUploadFile(list[index]));
+  }
+  return prepared;
+};
 
 const loadLocalAlbums = () => {
   try {
@@ -148,19 +204,87 @@ const loadRemoteAlbums = async () => {
   }
 };
 
+const loadRemoteState = async () => {
+  try {
+    const response = await apiFetch("/api/state");
+    const remoteState = await response.json();
+    state.hiddenAlbums = new Set(remoteState.hiddenAlbums || []);
+    state.hiddenPhotos = new Set(remoteState.hiddenPhotos || []);
+    state.covers = remoteState.covers || {};
+    applyRemoteState();
+  } catch {
+    state.hiddenAlbums = new Set();
+    state.hiddenPhotos = new Set();
+    state.covers = {};
+  }
+};
+
+const applyRemoteState = () => {
+  if (!state.data) return;
+  state.data.albums = state.data.albums
+    .filter((album) => !state.hiddenAlbums.has(album.id))
+    .map((album) => {
+      album.items = album.items.filter((item) => !state.hiddenPhotos.has(item.id) && !state.hiddenPhotos.has(item.storageKey));
+      album.count = album.items.length;
+      album.photos = album.items.filter((item) => item.type === "image").length;
+      album.videos = album.items.filter((item) => item.type === "video").length;
+      return album;
+    })
+    .filter((album) => album.items.length);
+};
+
 const mergeRemoteAlbum = (remoteAlbum) => {
-  const existing = state.data.albums.find((album) => album.id === remoteAlbum.id);
+  const titleKey = normalizeTitle(remoteAlbum.title);
+  const existing = state.data.albums.find((album) => album.id === remoteAlbum.id || (titleKey && normalizeTitle(album.title) === titleKey));
   if (!existing) {
+    remoteAlbum.sourceAlbumIds = [remoteAlbum.id];
     state.data.albums.unshift(remoteAlbum);
     return remoteAlbum;
   }
 
-  existing.items = [...existing.items.filter((item) => !item.remote), ...remoteAlbum.items];
+  const itemKeys = new Set(existing.items.map((item) => item.storageKey || item.id));
+  const incoming = remoteAlbum.items.filter((item) => !itemKeys.has(item.storageKey || item.id));
+  existing.items = [...existing.items, ...incoming];
   existing.count = existing.items.length;
   existing.photos = existing.items.filter((item) => item.type === "image").length;
   existing.videos = existing.items.filter((item) => item.type === "video").length;
   existing.remote = existing.remote || remoteAlbum.remote;
+  existing.sourceAlbumIds = Array.from(new Set([...(existing.sourceAlbumIds || [existing.id]), remoteAlbum.id]));
+  existing.date = existing.date || remoteAlbum.date;
   return existing;
+};
+
+const mergeAlbumsByTitle = () => {
+  const merged = [];
+  const byTitle = new Map();
+  sortAlbums(state.data.albums).forEach((album) => {
+    const titleKey = normalizeTitle(album.title);
+    const groupKey = titleKey || album.id;
+    if (!byTitle.has(groupKey)) {
+      album.sourceAlbumIds = album.sourceAlbumIds || [album.id];
+      byTitle.set(groupKey, album);
+      merged.push(album);
+      return;
+    }
+
+    const target = byTitle.get(groupKey);
+    const itemKeys = new Set(target.items.map((item) => item.storageKey || item.id));
+    album.items.forEach((item) => {
+      const itemKey = item.storageKey || item.id;
+      if (!itemKeys.has(itemKey)) {
+        itemKeys.add(itemKey);
+        target.items.push(item);
+      }
+    });
+    target.sourceAlbumIds = Array.from(new Set([...(target.sourceAlbumIds || [target.id]), ...(album.sourceAlbumIds || [album.id])]));
+    target.date = target.date || album.date;
+    target.count = target.items.length;
+    target.photos = target.items.filter((item) => item.type === "image").length;
+    target.videos = target.items.filter((item) => item.type === "video").length;
+    target.remote = target.remote || album.remote;
+    target.local = target.local || album.local;
+  });
+  state.data.albums = merged;
 };
 
 const mergeLocalAlbums = () => {
@@ -201,7 +325,9 @@ const showGallery = async (password) => {
   prepareEncryptedItems();
   await loadRemoteNotes();
   await loadRemoteAlbums();
+  await loadRemoteState();
   mergeLocalAlbums();
+  mergeAlbumsByTitle();
   await decryptInitialCovers();
 
   sessionStorage.setItem(AUTH_KEY, "unlocked");
@@ -220,6 +346,9 @@ const lockGallery = () => {
   state.key = null;
   state.apiPassword = "";
   state.notes = {};
+  state.hiddenAlbums = new Set();
+  state.hiddenPhotos = new Set();
+  state.covers = {};
   state.initialized = false;
   document.body.classList.add("locked");
   document.getElementById("auth-gate").setAttribute("aria-hidden", "false");
@@ -303,6 +432,7 @@ const selectAlbum = (albumId) => {
 };
 
 const refreshTimeline = () => {
+  mergeAlbumsByTitle();
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderExistingAlbumOptions();
@@ -310,6 +440,15 @@ const refreshTimeline = () => {
 
 const pickCoverItem = (album) => {
   if (!album) return null;
+  const coverId = state.covers[album.id];
+  if (coverId) {
+    const chosen = album.items.find((item) => item.id === coverId || item.storageKey === coverId);
+    if (chosen) return chosen;
+  }
+  for (const id of album.sourceAlbumIds || []) {
+    const chosen = state.covers[id] && album.items.find((item) => item.id === state.covers[id] || item.storageKey === state.covers[id]);
+    if (chosen) return chosen;
+  }
   return album.items.find((item) => item.type === "image") || album.items[0] || null;
 };
 
@@ -325,8 +464,6 @@ const renderStats = (data) => {
     document.getElementById("hero").style.setProperty("--hero-position", heroAlbum.title.includes("甜甜") ? "72% center" : "center");
   }
 };
-
-const tag = (text) => `<span class="tag">${text}</span>`;
 
 const sortAlbums = (albums) =>
   albums.slice().sort((a, b) => {
@@ -344,17 +481,12 @@ const renderTimeline = (albums) => {
       return `
         <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
           <div class="timeline-dot"></div>
+          <span class="timeline-date">${formatDate(album.date)}</span>
           <div class="timeline-card">
             ${cover ? `<img src="${cover.src}" alt="${album.title}" loading="lazy" />` : ""}
             <div class="timeline-body">
-              <span class="date">${formatDate(album.date)}</span>
               <h3>${album.title}</h3>
               <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
-              <div class="tag-row">
-                ${tag(album.category)}
-                ${tag(album.mood)}
-                ${album.videos ? tag(`${album.videos} 个视频`) : ""}
-              </div>
             </div>
           </div>
         </article>
@@ -454,18 +586,29 @@ const renderGallery = () => {
   setText("gallery-title", album?.title || "照片墙");
   setText("active-filter", activeText);
   const deleteAlbumButton = document.getElementById("delete-uploaded-album");
-  const hasRemoteItems = Boolean(album?.items.some((item) => item.remote));
-  deleteAlbumButton.hidden = !hasRemoteItems;
+  const addToCurrentButton = document.getElementById("add-to-current-album");
+  deleteAlbumButton.hidden = !album;
+  addToCurrentButton.hidden = !album;
   const notes = loadMemoryNotes();
 
-  masonry.innerHTML = items
+  const addCard = album
+    ? `
+      <button class="photo-card add-photo-card" type="button" id="masonry-add-photo">
+        <span>＋</span>
+        <b>添照片</b>
+      </button>
+    `
+    : "";
+
+  masonry.innerHTML = addCard + items
     .map(
       (item) => `
         <figure class="photo-card" tabindex="0" data-id="${item.id}">
           ${mediaMarkup(item)}
           <figcaption class="note-panel${notes[item.id] ? " has-note" : ""}">
             <button class="note-toggle" type="button" data-note-toggle="${item.id}" aria-label="给这张照片留言">✎</button>
-            ${item.remote ? `<button class="delete-photo" type="button" data-delete-photo="${item.storageKey}" aria-label="删除这张上传照片">×</button>` : ""}
+            <button class="cover-photo" type="button" data-cover-photo="${item.id}" aria-label="设为封面">♡</button>
+            <button class="delete-photo" type="button" data-delete-photo="${item.storageKey || item.id}" aria-label="删除这张照片">×</button>
             <div class="note-editor">
               <textarea class="memory-note" data-note-id="${item.id}" rows="2" placeholder="给这张照片留一句回忆">${notes[item.id] || ""}</textarea>
             </div>
@@ -475,7 +618,11 @@ const renderGallery = () => {
     )
     .join("");
 
+  document.getElementById("masonry-add-photo")?.addEventListener("click", () => {
+    document.getElementById("add-to-current-album").click();
+  });
   masonry.querySelectorAll(".photo-card").forEach((card) => {
+    if (!card.dataset.id) return;
     card.addEventListener("click", () => openLightbox(card.dataset.id));
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter") openLightbox(card.dataset.id);
@@ -494,7 +641,13 @@ const renderGallery = () => {
   masonry.querySelectorAll(".delete-photo").forEach((button) => {
     button.addEventListener("click", async (event) => {
       event.stopPropagation();
-      await deleteRemotePhoto(event.currentTarget.dataset.deletePhoto);
+      await deletePhoto(event.currentTarget.dataset.deletePhoto);
+    });
+  });
+  masonry.querySelectorAll(".cover-photo").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await setAlbumCover(event.currentTarget.dataset.coverPhoto);
     });
   });
   masonry.querySelectorAll(".memory-note").forEach((input) => {
@@ -508,10 +661,10 @@ const renderGallery = () => {
   observeGalleryMedia();
 };
 
-const removeRemotePhotoLocally = (key) => {
+const removePhotoLocally = (key) => {
   state.data.albums = state.data.albums
     .map((album) => {
-      album.items = album.items.filter((item) => item.storageKey !== key);
+      album.items = album.items.filter((item) => item.storageKey !== key && item.id !== key);
       album.count = album.items.length;
       album.photos = album.items.filter((item) => item.type === "image").length;
       album.videos = album.items.filter((item) => item.type === "video").length;
@@ -520,10 +673,15 @@ const removeRemotePhotoLocally = (key) => {
     .filter((album) => album.items.length || !album.remote);
 };
 
-const deleteRemotePhoto = async (key) => {
+const deletePhoto = async (key) => {
   if (!key) return;
-  await apiFetch(`/api/assets/${encodeURIComponent(key)}`, { method: "DELETE" });
-  removeRemotePhotoLocally(key);
+  if (key.startsWith("photo:")) {
+    await apiFetch(`/api/assets/${encodeURIComponent(key)}`, { method: "DELETE" });
+  } else {
+    await apiFetch(`/api/hidden/photos/${encodeURIComponent(key)}`, { method: "PUT" });
+    state.hiddenPhotos.add(key);
+  }
+  removePhotoLocally(key);
   refreshTimeline();
   renderGallery();
 };
@@ -531,20 +689,45 @@ const deleteRemotePhoto = async (key) => {
 const deleteRemoteAlbum = async () => {
   const album = currentAlbum();
   if (!album) return;
-  await apiFetch(`/api/albums/${encodeURIComponent(album.id)}`, { method: "DELETE" });
-  if (album.remote) {
-    state.data.albums = state.data.albums.filter((entry) => entry.id !== album.id);
-    state.albumId = null;
-    document.querySelectorAll(".gallery-panel").forEach((element) => {
-      element.hidden = true;
-    });
-  } else {
-    album.items = album.items.filter((item) => !item.remote);
-    album.count = album.items.length;
-    album.photos = album.items.filter((item) => item.type === "image").length;
-    album.videos = album.items.filter((item) => item.type === "video").length;
-    renderGallery();
+  const hasRemoteItems = album.items.some((item) => item.remote);
+  const hasOriginalItems = album.items.some((item) => !item.remote && !item.local);
+  const albumIds = album.sourceAlbumIds || [album.id];
+  if (hasRemoteItems) {
+    await Promise.all(albumIds.map((id) => apiFetch(`/api/albums/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null)));
   }
+  if (hasOriginalItems) {
+    await Promise.all(albumIds.map((id) => apiFetch(`/api/hidden/albums/${encodeURIComponent(id)}`, { method: "PUT" }).catch(() => null)));
+    albumIds.forEach((id) => state.hiddenAlbums.add(id));
+  }
+  if (album.local) {
+    saveLocalAlbums(loadLocalAlbums().filter((entry) => entry.id !== album.id));
+  }
+  if (hasRemoteItems || hasOriginalItems || album.local) {
+    state.data.albums = state.data.albums.filter((entry) => entry.id !== album.id);
+  }
+  state.albumId = null;
+  document.querySelectorAll(".gallery-panel").forEach((element) => {
+    element.hidden = true;
+  });
+  refreshTimeline();
+};
+
+const setAlbumCover = async (itemId) => {
+  const album = currentAlbum();
+  if (!album || !itemId) return;
+  const albumIds = album.sourceAlbumIds || [album.id];
+  await Promise.all(
+    albumIds.map((id) =>
+      apiFetch(`/api/covers/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId }),
+      }).catch(() => null),
+    ),
+  );
+  albumIds.forEach((id) => {
+    state.covers[id] = itemId;
+  });
   refreshTimeline();
 };
 
@@ -564,7 +747,9 @@ const openLightbox = async (id) => {
 };
 
 const addLocalAlbum = async (title, date, files, albumId = "") => {
-  const remoteAlbum = await addRemoteAlbum(title, date, files, albumId);
+  const matchedAlbum = !albumId && title ? state.data.albums.find((album) => normalizeTitle(album.title) === normalizeTitle(title)) : null;
+  const targetId = albumId || matchedAlbum?.id || "";
+  const remoteAlbum = await addRemoteAlbum(title, date, files, targetId);
   if (remoteAlbum) {
     mergeRemoteAlbum(remoteAlbum);
     refreshTimeline();
@@ -572,7 +757,7 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
     return;
   }
 
-  const targetAlbum = albumId ? state.data.albums.find((album) => album.id === albumId) : null;
+  const targetAlbum = targetId ? state.data.albums.find((album) => album.id === targetId) : null;
   const localAlbumId = targetAlbum?.id || `local-${Date.now()}`;
   const items = await Promise.all(
     Array.from(files).map(async (file, index) => {
@@ -635,6 +820,34 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
 };
 
 const addRemoteAlbum = (title, date, files, albumId = "") =>
+  new Promise(async (resolve) => {
+    const preparedFiles = await prepareUploadFiles(files);
+    if (!preparedFiles.length) {
+      resolve(null);
+      return;
+    }
+
+    const chunks = [];
+    for (let index = 0; index < preparedFiles.length; index += 6) {
+      chunks.push(preparedFiles.slice(index, index + 6));
+    }
+
+    let targetAlbumId = albumId;
+    let latestAlbum = null;
+    for (let index = 0; index < chunks.length; index += 1) {
+      setUploadStatus(`上传第 ${index + 1}/${chunks.length} 批`);
+      const uploaded = await uploadRemoteChunk(title, date, chunks[index], targetAlbumId, index + 1, chunks.length);
+      if (!uploaded) {
+        resolve(latestAlbum);
+        return;
+      }
+      latestAlbum = uploaded;
+      targetAlbumId = uploaded.id;
+    }
+    resolve(latestAlbum);
+  });
+
+const uploadRemoteChunk = (title, date, files, albumId = "", chunkIndex = 1, chunkTotal = 1) =>
   new Promise((resolve) => {
     const formData = new FormData();
     formData.append("title", title);
@@ -647,7 +860,7 @@ const addRemoteAlbum = (title, date, files, albumId = "") =>
     xhr.setRequestHeader("X-Site-Password", state.apiPassword);
     xhr.upload.addEventListener("progress", (event) => {
       if (!event.lengthComputable) return;
-      setUploadStatus(`上传中 ${Math.round((event.loaded / event.total) * 100)}%`);
+      setUploadStatus(`上传第 ${chunkIndex}/${chunkTotal} 批 · ${Math.round((event.loaded / event.total) * 100)}%`);
     });
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -685,6 +898,18 @@ const bindGalleryEvents = () => {
     titleInput.hidden = useExisting;
     titleInput.required = !useExisting;
     dateInput.hidden = useExisting;
+  });
+
+  document.getElementById("add-to-current-album").addEventListener("click", () => {
+    const album = currentAlbum();
+    if (!album) return;
+    uploadToggle.setAttribute("aria-expanded", "true");
+    uploadForm.hidden = false;
+    uploadMode.value = "existing";
+    renderExistingAlbumOptions();
+    existingAlbum.value = album.id;
+    uploadMode.dispatchEvent(new Event("change"));
+    document.getElementById("local-album-files").click();
   });
 
   document.getElementById("close-lightbox").addEventListener("click", () => {
