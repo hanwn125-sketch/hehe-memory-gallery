@@ -38,14 +38,8 @@ export async function onRequestPost({ request, env }) {
     .run();
 
   const rows = [];
-  const existing = await env.DB.prepare("SELECT size, mime FROM photos WHERE album_id = ?").bind(albumId).all();
-  const existingSignatures = new Set(existing.results.map((photo) => `${photo.size}:${photo.mime}`));
-
   for (const file of files.slice(0, 80)) {
     if (file.size > 24 * 1024 * 1024) continue;
-    const signature = `${file.size}:${file.type}`;
-    if (existingSignatures.has(signature)) continue;
-    existingSignatures.add(signature);
 
     const photoId = crypto.randomUUID();
     const extension = file.type.split("/")[1]?.replace("jpeg", "jpg") || "jpg";

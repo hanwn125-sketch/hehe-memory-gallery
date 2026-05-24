@@ -756,6 +756,7 @@ const editAlbumDate = async (albumId) => {
   const value = window.prompt("输入日期，例如 2026-05-01", album.date || "");
   if (value === null) return;
   const date = value.trim();
+  if (!date) return;
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     window.alert("日期格式用 2026-05-01 这种。");
     return;
@@ -801,10 +802,10 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
   const targetId = albumId || matchedAlbum?.id || "";
   const remoteAlbum = await addRemoteAlbum(title, date, files, targetId);
   if (remoteAlbum) {
-    mergeRemoteAlbum(remoteAlbum);
+    const mergedAlbum = mergeRemoteAlbum(remoteAlbum);
     refreshTimeline();
-    selectAlbum(remoteAlbum.id);
-    return;
+    selectAlbum(mergedAlbum.id);
+    return true;
   }
 
   const targetAlbum = targetId ? state.data.albums.find((album) => album.id === targetId) : null;
@@ -826,7 +827,7 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
     }),
   );
 
-  if (!items.length) return;
+  if (!items.length) return false;
 
   if (targetAlbum) {
     targetAlbum.items.push(...items);
@@ -834,7 +835,7 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
     targetAlbum.photos = targetAlbum.items.filter((item) => item.type === "image").length;
     refreshTimeline();
     selectAlbum(targetAlbum.id);
-    return;
+    return true;
   }
 
   const album = {
@@ -867,6 +868,7 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
   renderTimeline(state.data.albums);
   renderExistingAlbumOptions();
   selectAlbum(localAlbumId);
+  return true;
 };
 
 const addRemoteAlbum = (title, date, files, albumId = "") =>
@@ -986,7 +988,11 @@ const bindGalleryEvents = () => {
     const files = document.getElementById("local-album-files").files;
     if (!files.length) return;
     setUploadStatus("准备上传...");
-    await addLocalAlbum(title || "她的新合集", date, files, targetAlbum?.id || "");
+    const ok = await addLocalAlbum(title || "她的新合集", date, files, targetAlbum?.id || "");
+    if (!ok) {
+      setUploadStatus("上传没有成功，请再试一次");
+      return;
+    }
     setUploadStatus("上传完成");
     event.currentTarget.reset();
     uploadMode.dispatchEvent(new Event("change"));
