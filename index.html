@@ -31,7 +31,7 @@
           <a class="brand" href="#top" aria-label="回到顶部">时光纪念册</a>
           <div class="nav-actions">
             <a href="#timeline">时间线</a>
-            <a href="#upload">上传</a>
+            <a href="#food-map">美食</a>
             <button id="lock-button" type="button">锁定</button>
           </div>
         </nav>
@@ -65,6 +65,8 @@
             <button class="primary-button" type="submit">上传</button>
             <small id="upload-status" aria-live="polite"></small>
           </form>
+          <input id="quick-album-files" type="file" accept="image/*" multiple hidden />
+          <input id="quick-current-files" type="file" accept="image/*" multiple hidden />
         </section>
 
         <section class="timeline" id="timeline" aria-label="时间线"></section>
@@ -81,6 +83,28 @@
         </section>
 
         <section class="masonry gallery-panel" id="masonry" aria-live="polite" hidden></section>
+
+        <section class="food-map" id="food-map">
+          <div class="section-head food-head">
+            <div>
+              <h2>美食地图</h2>
+              <p>把想再去的店、好吃的菜和当时的小备注都放在这里。</p>
+            </div>
+          </div>
+          <form class="food-form" id="food-form">
+            <input id="food-shop" type="text" placeholder="店名" required />
+            <input id="food-place" type="text" placeholder="位置 / 城市" />
+            <input id="food-dishes" type="text" placeholder="菜品，例如：海肠捞饭、烤鱼" />
+            <select id="food-rating" aria-label="评分">
+              <option value="5">想再去 5 分</option>
+              <option value="4">很好吃 4 分</option>
+              <option value="3">还不错 3 分</option>
+            </select>
+            <textarea id="food-note" rows="2" placeholder="一句回忆，比如：那天下雨，但这家热汤很舒服"></textarea>
+            <button class="primary-button" type="submit">记一顿</button>
+          </form>
+          <div class="food-list" id="food-list" aria-live="polite"></div>
+        </section>
       </main>
     </div>
 

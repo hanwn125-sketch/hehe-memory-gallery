@@ -11,6 +11,7 @@ const state = {
   key: null,
   apiPassword: "",
   notes: {},
+  foods: [],
   hiddenAlbums: new Set(),
   hiddenPhotos: new Set(),
   covers: {},
@@ -205,6 +206,15 @@ const loadRemoteAlbums = async () => {
   }
 };
 
+const loadRemoteFoods = async () => {
+  try {
+    const response = await apiFetch("/api/foods");
+    state.foods = await response.json();
+  } catch {
+    state.foods = [];
+  }
+};
+
 const loadRemoteState = async () => {
   try {
     const response = await apiFetch("/api/state");
@@ -329,6 +339,7 @@ const showGallery = async (password) => {
   prepareEncryptedItems();
   await loadRemoteNotes();
   await loadRemoteAlbums();
+  await loadRemoteFoods();
   await loadRemoteState();
   mergeLocalAlbums();
   mergeAlbumsByTitle();
@@ -350,6 +361,7 @@ const lockGallery = () => {
   state.key = null;
   state.apiPassword = "";
   state.notes = {};
+  state.foods = [];
   state.hiddenAlbums = new Set();
   state.hiddenPhotos = new Set();
   state.covers = {};
@@ -415,6 +427,9 @@ const setText = (id, text) => {
   if (element) element.textContent = text;
 };
 
+const escapeHtml = (value) =>
+  String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+
 const currentAlbum = () => {
   if (!state.albumId || !state.data) return null;
   return state.data.albums.find((album) => album.id === state.albumId) || null;
@@ -441,6 +456,15 @@ const refreshTimeline = () => {
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderExistingAlbumOptions();
+};
+
+const quickUploadNewAlbum = () => {
+  document.getElementById("quick-album-files").click();
+};
+
+const quickUploadToCurrentAlbum = () => {
+  if (!currentAlbum()) return;
+  document.getElementById("quick-current-files").click();
 };
 
 const pickCoverItem = (album) => {
@@ -500,7 +524,7 @@ const renderTimeline = (albums) => {
     .join("") +
     `
       <article class="timeline-item timeline-add-item">
-        <button class="timeline-add-card" type="button" data-open-upload>
+        <button class="timeline-add-card" type="button" data-new-album-upload>
           <span>＋</span>
           <b>新合集</b>
         </button>
@@ -519,6 +543,7 @@ const renderTimeline = (albums) => {
       await editAlbumDate(event.currentTarget.dataset.editDate);
     });
   });
+  timeline.querySelector("[data-new-album-upload]")?.addEventListener("click", quickUploadNewAlbum);
 };
 
 const renderExistingAlbumOptions = () => {
@@ -638,7 +663,7 @@ const renderGallery = () => {
     .join("") + addCard;
 
   document.getElementById("masonry-add-photo")?.addEventListener("click", () => {
-    document.getElementById("add-to-current-album").click();
+    quickUploadToCurrentAlbum();
   });
   masonry.querySelectorAll(".photo-card").forEach((card) => {
     if (!card.dataset.id) return;
@@ -930,14 +955,48 @@ const setUploadStatus = (text) => {
   if (status) status.textContent = text;
 };
 
-const openUploadForm = () => {
-  const uploadToggle = document.getElementById("upload-toggle");
-  const uploadForm = document.getElementById("local-album-form");
-  if (!uploadToggle || !uploadForm) return;
-  const isOpen = uploadToggle.getAttribute("aria-expanded") === "true";
-  uploadToggle.setAttribute("aria-expanded", String(!isOpen));
-  uploadForm.hidden = isOpen;
-  if (!isOpen) uploadForm.scrollIntoView({ behavior: "smooth", block: "center" });
+const saveFood = async (food) => {
+  const response = await apiFetch("/api/foods", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(food),
+  });
+  const saved = await response.json();
+  state.foods.unshift(saved);
+  renderFoods();
+};
+
+const deleteFood = async (id) => {
+  await apiFetch(`/api/foods/${encodeURIComponent(id)}`, { method: "DELETE" });
+  state.foods = state.foods.filter((food) => food.id !== id);
+  renderFoods();
+};
+
+const renderFoods = () => {
+  const list = document.getElementById("food-list");
+  if (!list) return;
+  if (!state.foods.length) {
+    list.innerHTML = `<p class="empty-food">还没有记录。下一顿好吃的，就从这里开始。</p>`;
+    return;
+  }
+  list.innerHTML = state.foods
+    .map(
+      (food) => `
+        <article class="food-card">
+          <div>
+            <span class="food-score">${"★".repeat(Number(food.rating || 5))}</span>
+            <h3>${escapeHtml(food.shop)}</h3>
+            <p>${escapeHtml([food.place, food.dishes].filter(Boolean).join(" · "))}</p>
+            ${food.note ? `<small>${escapeHtml(food.note)}</small>` : ""}
+          </div>
+          <button type="button" data-delete-food="${food.id}" aria-label="删除这条美食记录">×</button>
+        </article>
+      `,
+    )
+    .join("");
+  list.querySelectorAll("[data-delete-food]").forEach((button) => {
+    button.addEventListener("click", () => deleteFood(button.dataset.deleteFood));
+  });
 };
 
 const bindGalleryEvents = () => {
@@ -948,11 +1007,7 @@ const bindGalleryEvents = () => {
   const titleInput = document.getElementById("local-album-title");
   const dateInput = document.getElementById("local-album-date");
 
-  uploadToggle.addEventListener("click", openUploadForm);
-
-  document.addEventListener("click", (event) => {
-    if (event.target.closest("[data-open-upload]")) openUploadForm();
-  });
+  uploadToggle.addEventListener("click", quickUploadNewAlbum);
 
   uploadMode.addEventListener("change", () => {
     const useExisting = uploadMode.value === "existing";
@@ -965,13 +1020,7 @@ const bindGalleryEvents = () => {
   document.getElementById("add-to-current-album").addEventListener("click", () => {
     const album = currentAlbum();
     if (!album) return;
-    uploadToggle.setAttribute("aria-expanded", "true");
-    uploadForm.hidden = false;
-    uploadMode.value = "existing";
-    renderExistingAlbumOptions();
-    existingAlbum.value = album.id;
-    uploadMode.dispatchEvent(new Event("change"));
-    document.getElementById("local-album-files").click();
+    quickUploadToCurrentAlbum();
   });
 
   document.getElementById("close-lightbox").addEventListener("click", () => {
@@ -1002,6 +1051,57 @@ const bindGalleryEvents = () => {
       setUploadStatus("");
     }, 800);
   });
+
+  document.getElementById("quick-album-files").addEventListener("change", async (event) => {
+    const files = event.currentTarget.files;
+    if (!files.length) return;
+    const title = window.prompt("这个合集叫什么？例如：威海的小路", "");
+    if (title === null || !title.trim()) {
+      event.currentTarget.value = "";
+      return;
+    }
+    const date = window.prompt("日期可以先填，也可以之后点日期改。格式：2026-05-24", new Date().toISOString().slice(0, 10));
+    if (date === null) {
+      event.currentTarget.value = "";
+      return;
+    }
+    const trimmedDate = date.trim();
+    if (trimmedDate && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+      window.alert("日期格式用 2026-05-24 这种。");
+      event.currentTarget.value = "";
+      return;
+    }
+    setUploadStatus("准备上传...");
+    const ok = await addLocalAlbum(title.trim(), trimmedDate, files, "");
+    setUploadStatus(ok ? "上传完成" : "上传没有成功，请再试一次");
+    event.currentTarget.value = "";
+    setTimeout(() => setUploadStatus(""), 1200);
+  });
+
+  document.getElementById("quick-current-files").addEventListener("change", async (event) => {
+    const album = currentAlbum();
+    const files = event.currentTarget.files;
+    if (!album || !files.length) return;
+    setUploadStatus("准备上传...");
+    const ok = await addLocalAlbum(album.title, album.date, files, album.id);
+    setUploadStatus(ok ? "上传完成" : "上传没有成功，请再试一次");
+    event.currentTarget.value = "";
+    setTimeout(() => setUploadStatus(""), 1200);
+  });
+
+  document.getElementById("food-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const shop = document.getElementById("food-shop").value.trim();
+    if (!shop) return;
+    await saveFood({
+      shop,
+      place: document.getElementById("food-place").value.trim(),
+      dishes: document.getElementById("food-dishes").value.trim(),
+      rating: document.getElementById("food-rating").value,
+      note: document.getElementById("food-note").value.trim(),
+    });
+    event.currentTarget.reset();
+  });
 };
 
 const initGallery = () => {
@@ -1009,6 +1109,7 @@ const initGallery = () => {
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderExistingAlbumOptions();
+  renderFoods();
   state.initialized = true;
   document.getElementById("auth-error").textContent = "";
 };
