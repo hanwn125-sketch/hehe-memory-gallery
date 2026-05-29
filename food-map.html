@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>天津美食地图</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ67PHxY6deY7d48I6yKxI9s+R0O4Y="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="food-map.css" />
+  </head>
+  <body>
+    <main class="food-map-shell">
+      <header class="map-header">
+        <a class="back-link" href="index.html">返回相册</a>
+        <div>
+          <p class="eyebrow">Tianjin Food Notes</p>
+          <h1>天津美食地图</h1>
+          <p>把吃过、想吃和很值得再来的店，钉在同一张天津地图上。</p>
+        </div>
+        <button class="export-button" id="export-button" type="button">导出记录</button>
+      </header>
+
+      <section class="map-board" aria-label="天津美食地图记录面板">
+        <section class="map-stage">
+          <div class="map-ribbon" aria-hidden="true">
+            <span>天津</span>
+            <span>Food Map</span>
+          </div>
+          <div class="map-tools" aria-label="地图搜索和状态">
+            <div class="search-line">
+              <input id="place-search" type="search" placeholder="搜索天津地点 / 店名 / 地址" />
+              <button id="place-search-button" type="button">搜索</button>
+            </div>
+            <p id="map-status">点击地图可选位置，或先搜索地点。</p>
+          </div>
+          <div id="food-map" aria-label="点击地图添加美食店铺位置"></div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="panel-head">
+            <p class="eyebrow">Shop Card</p>
+            <h2 id="form-title">新增店铺</h2>
+            <p id="form-hint">点击地图选择位置，再记录推荐菜。</p>
+          </div>
+
+          <form class="shop-form" id="shop-form">
+            <input type="hidden" id="shop-id" />
+            <label>
+              <span>店名</span>
+              <input id="shop-name" type="text" maxlength="40" placeholder="比如：桂园餐厅" required />
+            </label>
+            <label>
+              <span>区域 / 地址</span>
+              <input id="shop-place" type="text" maxlength="70" placeholder="和平区 / 滨江道附近" />
+            </label>
+            <label>
+              <span>好吃的菜</span>
+              <textarea id="shop-dishes" rows="3" maxlength="160" placeholder="用逗号隔开：八珍豆腐，罾蹦鲤鱼，锅塌里脊"></textarea>
+            </label>
+            <div class="form-row">
+              <label>
+                <span>状态</span>
+                <select id="shop-status">
+                  <option value="想吃">想吃</option>
+                  <option value="已吃">已吃</option>
+                  <option value="很推荐">很推荐</option>
+                  <option value="一般">一般</option>
+                </select>
+              </label>
+              <label>
+                <span>评分</span>
+                <input id="shop-rating" type="number" min="1" max="5" step="1" value="5" />
+              </label>
+            </div>
+            <label>
+              <span>备注</span>
+              <textarea id="shop-note" rows="3" maxlength="220" placeholder="排队、环境、适合什么时候去，都可以写在这里。"></textarea>
+            </label>
+            <label>
+              <span>坐标</span>
+              <input id="shop-coordinate" type="text" readonly placeholder="点击地图后自动填写" />
+            </label>
+            <div class="form-actions">
+              <button class="primary-action" type="submit">保存店铺</button>
+              <button class="plain-action" id="reset-form" type="button">清空</button>
+              <button class="danger-action" id="delete-shop" type="button" hidden>删除</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+
+      <section class="food-list-section">
+        <div class="list-toolbar">
+          <div>
+            <p class="eyebrow">Saved Places</p>
+            <h2>我的店铺</h2>
+          </div>
+          <div class="list-controls">
+            <input id="search-input" type="search" placeholder="搜索店名、区域或菜品" />
+            <div class="filter-pills" id="filter-pills" aria-label="店铺状态筛选"></div>
+          </div>
+        </div>
+        <div class="shop-list" id="shop-list" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <dialog class="shop-dialog" id="shop-dialog">
+      <button class="dialog-close" id="dialog-close" type="button" aria-label="关闭">×</button>
+      <p class="eyebrow" id="dialog-status"></p>
+      <h2 id="dialog-name"></h2>
+      <p class="dialog-place" id="dialog-place"></p>
+      <div class="dish-tags" id="dialog-dishes"></div>
+      <p class="dialog-note" id="dialog-note"></p>
+      <div class="dialog-actions">
+        <button class="primary-action" id="dialog-edit" type="button">编辑这家</button>
+        <button class="plain-action" id="dialog-center" type="button">回到位置</button>
+      </div>
+    </dialog>
+
+    <dialog class="confirm-dialog" id="confirm-dialog">
+      <p class="eyebrow">Confirm</p>
+      <h2>删除这条记录？</h2>
+      <p id="confirm-copy">删除后，这家店铺会从地图和列表里移除。</p>
+      <div class="dialog-actions">
+        <button class="danger-action" id="confirm-delete" type="button">确认删除</button>
+        <button class="plain-action" id="confirm-cancel" type="button">取消</button>
+      </div>
+    </dialog>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="food-map.js"></script>
+  </body>
+</html>
