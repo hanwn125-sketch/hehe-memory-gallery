@@ -383,6 +383,94 @@ main {
 
 .timeline-head {
   max-width: none;
+  position: relative;
+  align-items: end;
+  margin-top: 86px;
+  padding: 0 0 26px;
+}
+
+.timeline-head::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 24px 50%, var(--accent) 0 6px, var(--paper) 7px 10px, transparent 11px),
+    linear-gradient(90deg, var(--ink), rgba(64, 43, 33, 0.38), rgba(64, 43, 33, 0.1));
+}
+
+.timeline-head::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--paper);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.timeline-title-block {
+  max-width: 680px;
+}
+
+.timeline-title-block .eyebrow {
+  margin-bottom: 10px;
+  color: var(--accent);
+}
+
+.timeline-title-block h2 {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: clamp(42px, 7vw, 76px);
+  line-height: 0.9;
+  text-shadow: 4px 4px 0 rgba(242, 161, 91, 0.2);
+}
+
+.timeline-title-block h2::after {
+  content: "";
+  position: absolute;
+  left: 5%;
+  right: -12%;
+  bottom: 2px;
+  z-index: -1;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(242, 161, 91, 0.28);
+}
+
+.timeline-title-block p:not(.eyebrow) {
+  margin: 0;
+  max-width: 520px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.timeline-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.timeline-stamps span {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0 16px;
+  color: var(--ink);
+  background: rgba(255, 250, 241, 0.82);
+  box-shadow: 4px 4px 0 rgba(64, 43, 33, 0.1);
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .section-head p:not(.eyebrow) {
@@ -1071,6 +1159,21 @@ main {
 
   .timeline {
     grid-template-columns: 1fr;
+  }
+
+  .timeline-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 70px;
+  }
+
+  .timeline-title-block h2 {
+    font-size: clamp(40px, 16vw, 62px);
+  }
+
+  .timeline-stamps {
+    justify-content: flex-start;
   }
 
   .food-form,
