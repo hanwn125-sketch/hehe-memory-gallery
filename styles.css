@@ -225,6 +225,10 @@ body.locked .site-shell {
   font: inherit;
 }
 
+.nav-actions button.active {
+  background: rgba(242, 161, 91, 0.18);
+}
+
 .hero-inner {
   position: relative;
   z-index: 2;
@@ -292,6 +296,7 @@ h2 {
   min-height: 320px;
   position: relative;
   overflow: hidden;
+  width: 100%;
   display: grid;
   align-content: end;
   gap: 10px;
@@ -299,10 +304,13 @@ h2 {
   border-radius: 28px;
   padding: clamp(22px, 4vw, 36px);
   color: var(--text);
+  text-align: left;
   background:
     radial-gradient(circle at 82% 18%, rgba(242, 161, 91, 0.22), transparent 9rem),
     rgba(255, 250, 241, 0.9);
   box-shadow: var(--shadow);
+  cursor: pointer;
+  font: inherit;
 }
 
 .portal-card::before {
@@ -374,6 +382,11 @@ h2 {
 .portal-card:hover {
   transform: translateY(-3px);
   transition: transform 180ms ease;
+}
+
+.portal-card.active {
+  outline: 4px solid rgba(242, 161, 91, 0.36);
+  transform: translateY(-3px);
 }
 
 .primary-button {
@@ -615,6 +628,125 @@ main {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: #080807;
+}
+
+.timeline-title-block p,
+.timeline-stamps {
+  display: none;
+}
+
+.timeline-head {
+  align-items: flex-start;
+  margin-top: 70px;
+  padding-bottom: 0;
+}
+
+.timeline-head::before,
+.timeline-head::after {
+  content: none;
+}
+
+.timeline-title-block h2 {
+  margin-bottom: 0;
+}
+
+.timeline {
+  display: block;
+  margin: 28px 0 64px;
+  padding: 0;
+  overflow: visible;
+}
+
+.timeline::before {
+  content: none;
+}
+
+.timeline-year {
+  position: relative;
+  margin-bottom: 34px;
+}
+
+.timeline-year-label {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  width: fit-content;
+  margin: 0 0 -42px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 7px 15px;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 rgba(64, 43, 33, 0.1);
+  font-weight: 900;
+}
+
+.timeline-row {
+  position: relative;
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 78px 8px 18px;
+  scroll-snap-type: x proximity;
+  scrollbar-color: rgba(64, 43, 33, 0.36) transparent;
+}
+
+.timeline-row::-webkit-scrollbar {
+  height: 10px;
+}
+
+.timeline-row::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(64, 43, 33, 0.3);
+  background-clip: padding-box;
+}
+
+.timeline-row .timeline-item {
+  flex: 0 0 clamp(260px, 27vw, 310px);
+  scroll-snap-align: start;
+}
+
+.timeline-row .timeline-item::before {
+  top: -31px;
+  left: 0;
+  right: -28px;
+  height: 4px;
+  background:
+    radial-gradient(circle at 24px 50%, var(--accent) 0 6px, var(--paper) 7px 10px, transparent 11px),
+    linear-gradient(90deg, rgba(64, 43, 33, 0.78), rgba(64, 43, 33, 0.32));
+}
+
+.timeline-row .timeline-dot {
+  top: -43px;
+  left: 18px;
+}
+
+.timeline-row .timeline-date {
+  top: -68px;
+  left: 0;
+  transform: none;
+}
+
+.timeline-row .timeline-card {
+  position: relative;
+  min-height: 360px;
+}
+
+.timeline-row .timeline-card::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 14px;
+  width: 68px;
+  height: 20px;
+  border: 1px solid rgba(64, 43, 33, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 250, 241, 0.58);
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 .timeline-body {
@@ -1301,5 +1433,45 @@ main {
 
   .embedded-food-map {
     min-height: 1680px;
+  }
+}
+
+@media (max-width: 620px) {
+  .timeline {
+    display: block;
+    margin: 26px 0 56px;
+    padding: 0;
+  }
+
+  .timeline::before {
+    content: none;
+  }
+
+  .timeline-row {
+    gap: 22px;
+    padding-top: 78px;
+  }
+
+  .timeline-row .timeline-item {
+    flex-basis: min(78vw, 310px);
+    padding-top: 0;
+  }
+
+  .timeline-row .timeline-item::before {
+    top: -31px;
+    left: 0;
+    right: -22px;
+    width: auto;
+  }
+
+  .timeline-row .timeline-dot {
+    top: -43px;
+    left: 18px;
+  }
+
+  .timeline-row .timeline-date {
+    top: -68px;
+    left: 0;
+    transform: none;
   }
 }

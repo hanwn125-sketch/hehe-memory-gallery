@@ -502,34 +502,64 @@ const sortAlbums = (albums) =>
     return a.date.localeCompare(b.date);
   });
 
+const albumYear = (album) => (album.date || "待补日期").slice(0, 4) || "待补日期";
+
 const renderTimeline = (albums) => {
   const timeline = document.getElementById("timeline");
-  timeline.innerHTML = sortAlbums(albums)
-    .map((album) => {
-      const cover = pickCoverItem(album);
-      return `
-        <article class="timeline-item clickable-card" tabindex="0" data-album="${album.id}" role="button" aria-label="查看${album.title}">
-          <div class="timeline-dot"></div>
-          <button class="timeline-date" type="button" data-edit-date="${album.id}" aria-label="修改${album.title}日期">${formatDate(album.date)}</button>
-          <div class="timeline-card">
-            ${cover ? `<img src="${cover.src}" alt="${album.title}" loading="lazy" />` : ""}
-            <div class="timeline-body">
-              <h3>${album.title}</h3>
-              <p class="album-meta">${album.place || album.mood} · ${album.count} 张</p>
-            </div>
-          </div>
-        </article>
-      `;
+  const grouped = sortAlbums(albums).reduce((groups, album) => {
+    const year = albumYear(album);
+    if (!groups.has(year)) groups.set(year, []);
+    groups.get(year).push(album);
+    return groups;
+  }, new Map());
+
+  const yearSections = Array.from(grouped.entries())
+    .map(([year, yearAlbums]) => {
+      const cards = yearAlbums
+        .map((album) => {
+          const cover = pickCoverItem(album);
+          return [
+            '<article class="timeline-item clickable-card" tabindex="0" data-album="' + album.id + '" role="button" aria-label="查看' + album.title + '">',
+            '  <div class="timeline-dot"></div>',
+            '  <button class="timeline-date" type="button" data-edit-date="' + album.id + '" aria-label="修改' + album.title + '日期">' + formatDate(album.date) + '</button>',
+            '  <div class="timeline-card">',
+            cover ? '    <img src="' + cover.src + '" alt="' + album.title + '" loading="lazy" />' : '',
+            '    <div class="timeline-body">',
+            '      <h3>' + album.title + '</h3>',
+            '      <p class="album-meta">' + (album.place || album.mood) + ' · ' + album.count + ' 张</p>',
+            '    </div>',
+            '  </div>',
+            '</article>',
+          ].join('');
+        })
+        .join("");
+
+      return [
+        '<section class="timeline-year" aria-label="' + year + ' 年">',
+        '  <div class="timeline-year-label">' + year + '</div>',
+        '  <div class="timeline-row">',
+        cards,
+        '  </div>',
+        '</section>',
+      ].join('');
     })
-    .join("") +
-    `
-      <article class="timeline-item timeline-add-item">
-        <button class="timeline-add-card" type="button" data-new-album-upload>
-          <span>＋</span>
-          <b>新合集</b>
-        </button>
-      </article>
-    `;
+    .join("");
+
+  timeline.innerHTML =
+    yearSections +
+    [
+      '<section class="timeline-year timeline-add-year" aria-label="新增合集">',
+      '  <div class="timeline-year-label">新增</div>',
+      '  <div class="timeline-row">',
+      '    <article class="timeline-item timeline-add-item">',
+      '      <button class="timeline-add-card" type="button" data-new-album-upload>',
+      '        <span>＋</span>',
+      '        <b>新合集</b>',
+      '      </button>',
+      '    </article>',
+      '  </div>',
+      '</section>',
+    ].join('');
 
   timeline.querySelectorAll("[data-album]").forEach((card) => {
     card.addEventListener("click", () => selectAlbum(card.dataset.album));
@@ -1114,8 +1144,29 @@ const initGallery = () => {
   document.getElementById("auth-error").textContent = "";
 };
 
+const setHomeView = (view) => {
+  const nextView = view === "food" ? "food" : "timeline";
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.viewPanel !== nextView;
+  });
+  document.querySelectorAll("[data-view-tab]").forEach((tab) => {
+    const active = tab.dataset.viewTab === nextView;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-pressed", String(active));
+  });
+  sessionStorage.setItem("hehe-home-view", nextView);
+};
+
+const bindHomeViewTabs = () => {
+  document.querySelectorAll("[data-view-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => setHomeView(tab.dataset.viewTab));
+  });
+  setHomeView(sessionStorage.getItem("hehe-home-view") || "timeline");
+};
+
 const init = () => {
   bindAuth();
+  bindHomeViewTabs();
   const savedPassword = sessionStorage.getItem(AUTH_KEY);
   if (savedPassword && savedPassword !== "unlocked") {
     showGallery(savedPassword).catch(() => {
