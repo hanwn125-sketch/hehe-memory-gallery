@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
-    <title>小田和小韩的时光入口</title>
+    <title>小田和小韩的时光纪念册</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="locked">
@@ -30,7 +30,8 @@
         <nav class="topbar">
           <a class="brand" href="#top" aria-label="回到顶部">时光纪念册</a>
           <div class="nav-actions">
-            <a href="timeline.html">时间线</a>
+            <a href="index.html">首页</a>
+            <a href="#timeline">时间线</a>
             <a href="food-map.html">美食地图</a>
             <button id="lock-button" type="button">锁定</button>
           </div>
@@ -47,20 +48,7 @@
       </header>
 
       <main>
-        <section class="home-portal" aria-label="功能入口">
-          <a class="portal-card timeline-portal" href="timeline.html">
-            <span>时光</span>
-            <h2>时间线</h2>
-            <p>按日期翻照片、补充合集、回到每一次出发和见面。</p>
-          </a>
-          <a class="portal-card food-portal" href="food-map.html">
-            <span>味道</span>
-            <h2>美食地图</h2>
-            <p>在天津地图上点位置，记录店铺和好吃的菜。</p>
-          </a>
-        </section>
-
-        <section class="section-head timeline-head" hidden>
+        <section class="section-head timeline-head">
           <div class="timeline-title-block">
             <p class="eyebrow">时光轨迹</p>
             <h2>时间线</h2>
@@ -72,7 +60,7 @@
           </div>
         </section>
 
-        <section class="upload-panel" id="upload" hidden>
+        <section class="upload-panel" id="upload">
           <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false" hidden>＋ 新合集</button>
           <form id="local-album-form" class="local-album-form" hidden>
             <select id="upload-mode" aria-label="上传方式">
@@ -90,7 +78,7 @@
           <input id="quick-current-files" type="file" accept="image/*" multiple hidden />
         </section>
 
-        <section class="timeline" id="timeline" aria-label="时间线" hidden></section>
+        <section class="timeline" id="timeline" aria-label="时间线"></section>
 
         <section class="toolbar gallery-panel" id="gallery" hidden>
           <div>

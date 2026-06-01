@@ -13,6 +13,7 @@ const entries = [
   "index.html",
   "secure",
   "styles.css",
+  "timeline.html",
 ];
 
 await rm(out, { recursive: true, force: true });

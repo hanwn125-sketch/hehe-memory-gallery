@@ -345,7 +345,7 @@ const showGallery = async (password) => {
   mergeAlbumsByTitle();
   await decryptInitialCovers();
 
-  sessionStorage.setItem(AUTH_KEY, "unlocked");
+  sessionStorage.setItem(AUTH_KEY, password);
   document.body.classList.remove("locked");
   document.getElementById("auth-gate").setAttribute("aria-hidden", "true");
   document.getElementById("site-shell").setAttribute("aria-hidden", "false");
@@ -1116,6 +1116,14 @@ const initGallery = () => {
 
 const init = () => {
   bindAuth();
+  const savedPassword = sessionStorage.getItem(AUTH_KEY);
+  if (savedPassword && savedPassword !== "unlocked") {
+    showGallery(savedPassword).catch(() => {
+      sessionStorage.removeItem(AUTH_KEY);
+      document.getElementById("password-input").focus();
+    });
+    return;
+  }
   document.getElementById("password-input").focus();
 };
 
