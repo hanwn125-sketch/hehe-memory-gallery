@@ -664,29 +664,58 @@ main {
 
 .timeline-year {
   position: relative;
-  margin-bottom: 46px;
+  margin-bottom: 52px;
 }
 
 .timeline-year-label {
-  position: relative;
-  z-index: 2;
-  display: flex;
+  position: absolute;
+  top: 18px;
+  left: 8px;
+  z-index: 6;
+  display: inline-flex;
   align-items: center;
-  gap: 18px;
-  margin: 0 0 12px;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 48px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0 18px;
   color: var(--ink);
-  font-size: clamp(34px, 5vw, 58px);
+  background:
+    linear-gradient(135deg, rgba(242, 161, 91, 0.2), rgba(255, 250, 241, 0.95) 54%),
+    var(--paper);
+  box-shadow: 4px 5px 0 rgba(64, 43, 33, 0.12);
+  font-size: clamp(24px, 3.2vw, 40px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
+  transform: rotate(-1deg);
 }
 
 .timeline-year-label::after {
   content: "";
-  flex: 1;
-  height: 3px;
+  position: absolute;
+  right: -9px;
+  bottom: 7px;
+  width: 28px;
+  height: 8px;
+  border: 1px solid rgba(64, 43, 33, 0.12);
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(64, 43, 33, 0.76), rgba(64, 43, 33, 0.08));
+  background: rgba(255, 250, 241, 0.66);
+  transform: rotate(4deg);
+}
+
+.timeline-year-label::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px rgba(64, 43, 33, 0.5);
+  transform: translateY(-50%);
 }
 
 .timeline-row {
@@ -704,6 +733,7 @@ main {
   gap: 28px;
   width: max-content;
   min-width: 100%;
+  padding-left: 128px;
   padding-top: 78px;
 }
 
@@ -715,7 +745,9 @@ main {
   right: 0;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(64, 43, 33, 0.82), rgba(64, 43, 33, 0.28));
+  background:
+    repeating-linear-gradient(90deg, transparent 0 78px, rgba(242, 161, 91, 0.58) 78px 84px, transparent 84px 128px),
+    linear-gradient(90deg, rgba(64, 43, 33, 0.74), rgba(64, 43, 33, 0.18));
 }
 
 .timeline-row::-webkit-scrollbar {
@@ -1478,8 +1510,22 @@ main {
     padding-top: 0;
   }
 
+  .timeline-year-label {
+    min-width: 78px;
+    min-height: 42px;
+    padding: 0 14px;
+    font-size: 24px;
+  }
+
+  .timeline-year-label::before {
+    left: 8px;
+    width: 7px;
+    height: 7px;
+  }
+
   .timeline-track {
     gap: 22px;
+    padding-left: 102px;
     padding-top: 76px;
   }
 
