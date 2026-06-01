@@ -6,6 +6,10 @@ const TIANJIN_BOUNDS = [
 ];
 const FILTERS = ["全部", "想吃", "已吃", "很推荐", "一般"];
 
+if (new URLSearchParams(window.location.search).get("embedded") === "1") {
+  document.documentElement.classList.add("embedded");
+}
+
 const sampleShops = [
   {
     id: "sample-guiyuan",

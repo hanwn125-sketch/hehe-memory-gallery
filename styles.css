@@ -832,6 +832,16 @@ main {
   color: var(--muted);
 }
 
+.embedded-food-map {
+  display: block;
+  width: 100%;
+  min-height: 980px;
+  border: 2.5px solid var(--ink);
+  border-radius: 28px;
+  background: rgba(255, 250, 241, 0.72);
+  box-shadow: var(--shadow);
+}
+
 .food-form {
   display: grid;
   grid-template-columns: 1.1fr 1fr 1.4fr 150px;
@@ -1067,5 +1077,9 @@ main {
   .food-form textarea,
   .food-form button {
     grid-column: 1 / -1;
+  }
+
+  .embedded-food-map {
+    min-height: 1680px;
   }
 }

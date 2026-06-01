@@ -32,6 +32,10 @@ body {
     linear-gradient(180deg, #55b88e 0%, #dbe7bd 46%, #fff3d0 100%);
 }
 
+html.embedded body {
+  background: transparent;
+}
+
 button,
 input,
 select,
@@ -230,6 +234,20 @@ button {
   width: min(1380px, calc(100vw - 28px));
   margin: 0 auto;
   padding: 18px 0 36px;
+}
+
+html.embedded .food-map-shell {
+  width: 100%;
+  padding: 0;
+}
+
+html.embedded .map-header {
+  display: none;
+}
+
+html.embedded .map-board,
+html.embedded .food-list-section {
+  box-shadow: none;
 }
 
 .map-header,
