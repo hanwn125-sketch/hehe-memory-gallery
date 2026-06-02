@@ -523,7 +523,7 @@ const renderTimeline = (albums) => {
             '  <div class="timeline-dot"></div>',
             '  <button class="timeline-date" type="button" data-edit-date="' + album.id + '" aria-label="修改' + album.title + '日期">' + formatDate(album.date) + '</button>',
             '  <div class="timeline-card">',
-            cover ? '    <img src="' + cover.src + '" alt="' + album.title + '" loading="lazy" />' : '',
+            cover ? '    <img src="' + cover.src + '" alt="' + album.title + '" loading="lazy" decoding="async" />' : '',
             '    <div class="timeline-body">',
             '      <h3>' + album.title + '</h3>',
             '      <p class="album-meta">' + (album.place || album.mood) + ' · ' + album.count + ' 张</p>',
@@ -607,7 +607,7 @@ const mediaMarkup = (item) => {
       ? `<video src="${item.src}" muted controls preload="metadata"></video>`
       : `<div class="media-placeholder" data-item-id="${item.id}">轻点后加载视频</div>`;
   }
-  return `<img ${loaded ? `src="${item.src}"` : ""} data-item-id="${item.id}" alt="" loading="lazy" />`;
+  return `<img ${loaded ? `src="${item.src}"` : ""} data-item-id="${item.id}" alt="" loading="lazy" decoding="async" />`;
 };
 
 const loadGalleryMedia = async (element) => {
@@ -644,7 +644,7 @@ const observeGalleryMedia = () => {
         loadGalleryMedia(entry.target);
       });
     },
-    { rootMargin: "600px 0px" },
+    { rootMargin: "300px 0px" },
   );
 
   targets.forEach((element) => {
