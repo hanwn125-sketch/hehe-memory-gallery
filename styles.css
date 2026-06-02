@@ -631,6 +631,14 @@ main {
   background: #080807;
 }
 
+.timeline-cover-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background:
+    linear-gradient(135deg, rgba(242, 161, 91, 0.16), rgba(255, 250, 241, 0.84)),
+    repeating-linear-gradient(90deg, rgba(64, 43, 33, 0.05) 0 1px, transparent 1px 18px);
+}
+
 .timeline-title-block p,
 .timeline-stamps {
   display: none;

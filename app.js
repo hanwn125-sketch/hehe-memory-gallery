@@ -21,6 +21,8 @@ const state = {
 };
 
 const base64ToBytes = (value) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+const hasRemoteBackend = () =>
+  location.hostname.endsWith(".pages.dev") || location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
 const deriveKey = async (password, salt, iterations) => {
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
@@ -146,6 +148,7 @@ const saveLocalAlbums = (albums) => {
 };
 
 const apiFetch = async (path, options = {}) => {
+  if (!hasRemoteBackend()) throw new Error("Remote API is unavailable on this host");
   const headers = new Headers(options.headers || {});
   if (state.apiPassword) headers.set("X-Site-Password", state.apiPassword);
   const response = await fetch(path, { ...options, headers });
@@ -337,13 +340,8 @@ const showGallery = async (password) => {
   state.key = await deriveKey(password, base64ToBytes(config.salt), config.iterations);
   state.data = await decryptJson(state.key, config.manifest);
   prepareEncryptedItems();
-  await loadRemoteNotes();
-  await loadRemoteAlbums();
-  await loadRemoteFoods();
-  await loadRemoteState();
   mergeLocalAlbums();
   mergeAlbumsByTitle();
-  await decryptInitialCovers();
 
   sessionStorage.setItem(AUTH_KEY, password);
   document.body.classList.remove("locked");
@@ -351,6 +349,24 @@ const showGallery = async (password) => {
   document.getElementById("site-shell").setAttribute("aria-hidden", "false");
 
   if (!state.initialized) initGallery();
+
+  (async () => {
+    await loadRemoteNotes();
+    await loadRemoteAlbums();
+    await loadRemoteFoods();
+    await loadRemoteState();
+    if (!state.data) return;
+    mergeLocalAlbums();
+    mergeAlbumsByTitle();
+    renderStats(state.data);
+    renderTimeline(state.data.albums);
+    renderExistingAlbumOptions();
+    if (state.albumId) renderGallery();
+    await decryptInitialCovers();
+    if (!state.data) return;
+    renderStats(state.data);
+    renderTimeline(state.data.albums);
+  })().catch(() => {});
 };
 
 const lockGallery = () => {
@@ -481,6 +497,9 @@ const pickCoverItem = (album) => {
   return album.items.find((item) => item.type === "image") || album.items[0] || null;
 };
 
+const mediaIsReady = (item) =>
+  item?.local || item?.decrypted || item?.src?.startsWith("data:") || item?.src?.startsWith("blob:");
+
 const renderStats = (data) => {
   const heroAlbum =
     data.albums.find((album) => album.title.includes("甜甜")) ||
@@ -488,7 +507,7 @@ const renderStats = (data) => {
     data.albums.find((album) => album.cover) ||
     data.albums[0];
   const coverItem = pickCoverItem(heroAlbum);
-  if (coverItem?.src) {
+  if (mediaIsReady(coverItem)) {
     document.getElementById("hero").style.setProperty("--hero-image", `url("${coverItem.src}")`);
     document.getElementById("hero").style.setProperty("--hero-position", heroAlbum.title.includes("甜甜") ? "72% center" : "center");
   }
@@ -523,7 +542,9 @@ const renderTimeline = (albums) => {
             '  <div class="timeline-dot"></div>',
             '  <button class="timeline-date" type="button" data-edit-date="' + album.id + '" aria-label="修改' + album.title + '日期">' + formatDate(album.date) + '</button>',
             '  <div class="timeline-card">',
-            cover ? '    <img src="' + cover.src + '" alt="' + album.title + '" loading="lazy" decoding="async" />' : '',
+            cover && mediaIsReady(cover)
+              ? '    <img src="' + cover.src + '" alt="' + album.title + '" loading="lazy" decoding="async" />'
+              : '    <div class="timeline-cover-placeholder"></div>',
             '    <div class="timeline-body">',
             '      <h3>' + album.title + '</h3>',
             '      <p class="album-meta">' + (album.place || album.mood) + ' · ' + album.count + ' 张</p>',
@@ -605,7 +626,7 @@ const itemMatches = (item) => {
 };
 
 const mediaMarkup = (item) => {
-  const loaded = item.local || item.decrypted || item.src?.startsWith("data:") || item.src?.startsWith("blob:");
+  const loaded = mediaIsReady(item);
   if (item.type === "video") {
     return loaded
       ? `<video src="${item.src}" muted controls preload="metadata"></video>`
