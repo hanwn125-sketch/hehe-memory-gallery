@@ -565,6 +565,10 @@ const renderTimeline = (albums) => {
       '</section>',
     ].join('');
 
+  timeline.querySelectorAll(".timeline-row").forEach((row) => {
+    row.scrollLeft = 0;
+  });
+
   timeline.querySelectorAll("[data-album]").forEach((card) => {
     card.addEventListener("click", () => selectAlbum(card.dataset.album));
     card.addEventListener("keydown", (event) => {

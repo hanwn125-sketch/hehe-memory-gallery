@@ -723,6 +723,7 @@ main {
   overflow-x: auto;
   overflow-y: visible;
   padding: 0 8px 18px;
+  scroll-padding-left: 116px;
   scroll-snap-type: x proximity;
   scrollbar-color: rgba(64, 43, 33, 0.36) transparent;
 }
@@ -733,7 +734,7 @@ main {
   gap: 28px;
   width: max-content;
   min-width: 100%;
-  padding-left: 128px;
+  padding-left: 116px;
   padding-top: 78px;
 }
 
@@ -1525,7 +1526,7 @@ main {
 
   .timeline-track {
     gap: 22px;
-    padding-left: 102px;
+    padding-left: 96px;
     padding-top: 76px;
   }
 
