@@ -25,8 +25,8 @@
         <nav class="topbar">
           <a class="brand" href="#top" aria-label="回到顶部">时光纪念册</a>
           <div class="nav-actions">
-            <button type="button" data-view-tab="timeline">时间线</button>
-            <button type="button" data-view-tab="food">美食地图</button>
+            <a href="#timeline">时间线</a>
+            <button id="nav-upload-button" type="button">上传照片</button>
             <button id="lock-button" type="button">锁定</button>
           </div>
         </nav>
@@ -36,20 +36,7 @@
       </header>
 
       <main>
-        <section class="home-portal" id="view-switcher" aria-label="选择内容">
-          <button class="portal-card timeline-portal active" type="button" data-view-tab="timeline" aria-pressed="true">
-            <span>时光</span>
-            <h2>时间线</h2>
-            <p>按年份横向翻看每一次合集。</p>
-          </button>
-          <button class="portal-card food-portal" type="button" data-view-tab="food" aria-pressed="false">
-            <span>味道</span>
-            <h2>美食地图</h2>
-            <p>在天津地图上点位置，记录店铺和好吃的菜。</p>
-          </button>
-        </section>
-
-        <section class="home-view" data-view-panel="timeline">
+        <section class="home-view">
           <section class="section-head timeline-head">
             <div class="timeline-title-block">
               <h2>时间线</h2>
@@ -57,7 +44,7 @@
           </section>
 
           <section class="upload-panel" id="upload">
-            <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false" hidden>＋ 新合集</button>
+            <button class="upload-toggle" id="upload-toggle" type="button" aria-expanded="false">＋ 上传照片</button>
             <form id="local-album-form" class="local-album-form" hidden>
               <select id="upload-mode" aria-label="上传方式">
                 <option value="new">新合集</option>
@@ -68,9 +55,9 @@
               <input id="local-album-date" type="date" />
               <input id="local-album-files" type="file" accept="image/*" multiple required />
               <button class="primary-button" type="submit">上传</button>
+              <small class="upload-limits">一次最多 60 张，单张原图不超过 24MB</small>
               <small id="upload-status" aria-live="polite"></small>
             </form>
-            <input id="quick-album-files" type="file" accept="image/*" multiple hidden />
             <input id="quick-current-files" type="file" accept="image/*" multiple hidden />
           </section>
 
@@ -88,32 +75,6 @@
           </section>
 
           <section class="masonry gallery-panel" id="masonry" aria-live="polite" hidden></section>
-        </section>
-
-        <section class="home-view" data-view-panel="food" hidden>
-          <section class="food-map" id="food-map">
-            <div class="section-head food-head">
-              <div>
-                <h2>美食地图</h2>
-                <p>直接在地图上点位置，记录店铺和好吃的菜。</p>
-              </div>
-              <a class="subtle-action" href="food-map.html">全屏打开</a>
-            </div>
-            <iframe class="embedded-food-map" src="food-map.html?embedded=1" title="天津美食地图录入面板"></iframe>
-            <form class="food-form legacy-food-form" id="food-form" hidden>
-              <input id="food-shop" type="text" placeholder="店名" required />
-              <input id="food-place" type="text" placeholder="位置 / 城市" />
-              <input id="food-dishes" type="text" placeholder="菜品，例如：海肠捞饭、烤鱼" />
-              <select id="food-rating" aria-label="评分">
-                <option value="5">想再去 5 分</option>
-                <option value="4">很好吃 4 分</option>
-                <option value="3">还不错 3 分</option>
-              </select>
-              <textarea id="food-note" rows="2" placeholder="一句回忆，比如：那天下雨，但这家热汤很舒服"></textarea>
-              <button class="primary-button" type="submit">记一顿</button>
-            </form>
-            <div class="food-list legacy-food-list" id="food-list" aria-live="polite" hidden></div>
-          </section>
         </section>
       </main>
     </div>

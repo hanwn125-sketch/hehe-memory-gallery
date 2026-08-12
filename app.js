@@ -1,6 +1,9 @@
 const AUTH_KEY = "hehe-gallery-auth-v2";
 const LOCAL_ALBUMS_KEY = "hehe-local-albums-v1";
 const MEMORY_NOTES_KEY = "hehe-memory-notes-v1";
+const UPLOAD_API_ORIGIN = location.hostname.endsWith("github.io") ? "https://hehe-memory-gallery.pages.dev" : "";
+const MAX_UPLOAD_FILES = 60;
+const MAX_UPLOAD_SOURCE_BYTES = 24 * 1024 * 1024;
 
 const state = {
   data: null,
@@ -11,7 +14,6 @@ const state = {
   key: null,
   apiPassword: "",
   notes: {},
-  foods: [],
   hiddenAlbums: new Set(),
   hiddenPhotos: new Set(),
   covers: {},
@@ -21,9 +23,6 @@ const state = {
 };
 
 const base64ToBytes = (value) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
-const hasRemoteBackend = () =>
-  location.hostname.endsWith(".pages.dev") || location.hostname === "localhost" || location.hostname === "127.0.0.1";
-
 const deriveKey = async (password, salt, iterations) => {
   const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
@@ -127,6 +126,13 @@ const imageToUploadFile = (file, maxSize = 1800, quality = 0.82) =>
 
 const prepareUploadFiles = async (files) => {
   const list = Array.from(files).filter((file) => file.type?.startsWith("image/"));
+  if (list.length > MAX_UPLOAD_FILES) {
+    throw new Error(`一次最多选择 ${MAX_UPLOAD_FILES} 张照片`);
+  }
+  const oversized = list.find((file) => file.size > MAX_UPLOAD_SOURCE_BYTES);
+  if (oversized) {
+    throw new Error(`${oversized.name} 超过单张 24MB 的上限`);
+  }
   const prepared = [];
   for (let index = 0; index < list.length; index += 1) {
     setUploadStatus(`整理照片 ${index + 1}/${list.length}`);
@@ -148,10 +154,10 @@ const saveLocalAlbums = (albums) => {
 };
 
 const apiFetch = async (path, options = {}) => {
-  if (!hasRemoteBackend()) throw new Error("Remote API is unavailable on this host");
+  const target = path.startsWith("/api/") ? `${UPLOAD_API_ORIGIN}${path}` : path;
   const headers = new Headers(options.headers || {});
   if (state.apiPassword) headers.set("X-Site-Password", state.apiPassword);
-  const response = await fetch(path, { ...options, headers });
+  const response = await fetch(target, { ...options, headers });
   if (!response.ok) throw new Error(`API request failed: ${response.status}`);
   return response;
 };
@@ -206,15 +212,6 @@ const loadRemoteAlbums = async () => {
     }
   } catch {
     // Remote interaction is optional until Cloudflare bindings are configured.
-  }
-};
-
-const loadRemoteFoods = async () => {
-  try {
-    const response = await apiFetch("/api/foods");
-    state.foods = await response.json();
-  } catch {
-    state.foods = [];
   }
 };
 
@@ -353,7 +350,6 @@ const showGallery = async (password) => {
   (async () => {
     await loadRemoteNotes();
     await loadRemoteAlbums();
-    await loadRemoteFoods();
     await loadRemoteState();
     if (!state.data) return;
     mergeLocalAlbums();
@@ -377,7 +373,6 @@ const lockGallery = () => {
   state.key = null;
   state.apiPassword = "";
   state.notes = {};
-  state.foods = [];
   state.hiddenAlbums = new Set();
   state.hiddenPhotos = new Set();
   state.covers = {};
@@ -474,8 +469,13 @@ const refreshTimeline = () => {
   renderExistingAlbumOptions();
 };
 
-const quickUploadNewAlbum = () => {
-  document.getElementById("quick-album-files").click();
+const openUploadPanel = () => {
+  const uploadForm = document.getElementById("local-album-form");
+  const uploadToggle = document.getElementById("upload-toggle");
+  const opening = uploadForm.hidden;
+  uploadForm.hidden = !opening;
+  uploadToggle.setAttribute("aria-expanded", String(opening));
+  if (opening) document.getElementById("upload").scrollIntoView({ behavior: "smooth", block: "center" });
 };
 
 const quickUploadToCurrentAlbum = () => {
@@ -602,7 +602,7 @@ const renderTimeline = (albums) => {
       await editAlbumDate(event.currentTarget.dataset.editDate);
     });
   });
-  timeline.querySelector("[data-new-album-upload]")?.addEventListener("click", quickUploadNewAlbum);
+  timeline.querySelector("[data-new-album-upload]")?.addEventListener("click", openUploadPanel);
 };
 
 const renderExistingAlbumOptions = () => {
@@ -891,73 +891,19 @@ const addLocalAlbum = async (title, date, files, albumId = "") => {
     selectAlbum(mergedAlbum.id);
     return true;
   }
-
-  const targetAlbum = targetId ? state.data.albums.find((album) => album.id === targetId) : null;
-  const localAlbumId = targetAlbum?.id || `local-${Date.now()}`;
-  const items = await Promise.all(
-    Array.from(files).map(async (file, index) => {
-      const src = await fileToDataUrl(file);
-      return {
-        id: `${localAlbumId}-${Date.now()}-${index + 1}`,
-        type: "image",
-        title,
-        src,
-        local: true,
-        originalPath: "",
-        date: date || new Date().toISOString().slice(0, 10),
-        year: (date || new Date().toISOString()).slice(0, 4),
-        bytes: file.size,
-      };
-    }),
-  );
-
-  if (!items.length) return false;
-
-  if (targetAlbum) {
-    targetAlbum.items.push(...items);
-    targetAlbum.count = targetAlbum.items.length;
-    targetAlbum.photos = targetAlbum.items.filter((item) => item.type === "image").length;
-    refreshTimeline();
-    selectAlbum(targetAlbum.id);
-    return true;
-  }
-
-  const album = {
-    id: localAlbumId,
-    local: true,
-    sourceFolder: "local",
-    title,
-    date: date || new Date().toISOString().slice(0, 10),
-    category: "她的上传",
-    mood: "本地合集",
-    place: "",
-    cover: items[0].src,
-    count: items.length,
-    photos: items.length,
-    videos: 0,
-    items,
-  };
-
-  state.data.albums.unshift(album);
-  saveLocalAlbums([album, ...loadLocalAlbums()]);
-
-  if (!state.data.categories.some((item) => item.name === "她的上传")) {
-    state.data.categories.push({ name: "她的上传", count: items.length });
-  }
-
-  state.data.stats.albums += 1;
-  state.data.stats.photos += items.length;
-  state.data.stats.displayItems += items.length;
-  renderStats(state.data);
-  renderTimeline(state.data.albums);
-  renderExistingAlbumOptions();
-  selectAlbum(localAlbumId);
-  return true;
+  throw new Error(document.getElementById("upload-status")?.textContent || "云端上传失败，请检查网络后重试");
 };
 
 const addRemoteAlbum = (title, date, files, albumId = "") =>
   new Promise(async (resolve) => {
-    const preparedFiles = await prepareUploadFiles(files);
+    let preparedFiles;
+    try {
+      preparedFiles = await prepareUploadFiles(files);
+    } catch (error) {
+      setUploadStatus(error.message || "照片整理失败");
+      resolve(null);
+      return;
+    }
     if (!preparedFiles.length) {
       resolve(null);
       return;
@@ -974,7 +920,7 @@ const addRemoteAlbum = (title, date, files, albumId = "") =>
       setUploadStatus(`上传第 ${index + 1}/${chunks.length} 批`);
       const uploaded = await uploadRemoteChunk(title, date, chunks[index], targetAlbumId, index + 1, chunks.length);
       if (!uploaded) {
-        resolve(latestAlbum);
+        resolve(null);
         return;
       }
       latestAlbum = uploaded;
@@ -992,7 +938,7 @@ const uploadRemoteChunk = (title, date, files, albumId = "", chunkIndex = 1, chu
     Array.from(files).forEach((file) => formData.append("files", file));
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/albums");
+    xhr.open("POST", `${UPLOAD_API_ORIGIN}/api/albums`);
     xhr.setRequestHeader("X-Site-Password", state.apiPassword);
     xhr.upload.addEventListener("progress", (event) => {
       if (!event.lengthComputable) return;
@@ -1002,60 +948,20 @@ const uploadRemoteChunk = (title, date, files, albumId = "", chunkIndex = 1, chu
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(JSON.parse(xhr.responseText));
       } else {
+        setUploadStatus(xhr.status === 401 ? "上传授权已失效" : `上传失败（${xhr.status}）`);
         resolve(null);
       }
     });
-    xhr.addEventListener("error", () => resolve(null));
+    xhr.addEventListener("error", () => {
+      setUploadStatus("网络或跨域配置阻止了上传");
+      resolve(null);
+    });
     xhr.send(formData);
   });
 
 const setUploadStatus = (text) => {
   const status = document.getElementById("upload-status");
   if (status) status.textContent = text;
-};
-
-const saveFood = async (food) => {
-  const response = await apiFetch("/api/foods", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(food),
-  });
-  const saved = await response.json();
-  state.foods.unshift(saved);
-  renderFoods();
-};
-
-const deleteFood = async (id) => {
-  await apiFetch(`/api/foods/${encodeURIComponent(id)}`, { method: "DELETE" });
-  state.foods = state.foods.filter((food) => food.id !== id);
-  renderFoods();
-};
-
-const renderFoods = () => {
-  const list = document.getElementById("food-list");
-  if (!list) return;
-  if (!state.foods.length) {
-    list.innerHTML = `<p class="empty-food">还没有记录。下一顿好吃的，就从这里开始。</p>`;
-    return;
-  }
-  list.innerHTML = state.foods
-    .map(
-      (food) => `
-        <article class="food-card">
-          <div>
-            <span class="food-score">${"★".repeat(Number(food.rating || 5))}</span>
-            <h3>${escapeHtml(food.shop)}</h3>
-            <p>${escapeHtml([food.place, food.dishes].filter(Boolean).join(" · "))}</p>
-            ${food.note ? `<small>${escapeHtml(food.note)}</small>` : ""}
-          </div>
-          <button type="button" data-delete-food="${food.id}" aria-label="删除这条美食记录">×</button>
-        </article>
-      `,
-    )
-    .join("");
-  list.querySelectorAll("[data-delete-food]").forEach((button) => {
-    button.addEventListener("click", () => deleteFood(button.dataset.deleteFood));
-  });
 };
 
 const bindGalleryEvents = () => {
@@ -1066,7 +972,11 @@ const bindGalleryEvents = () => {
   const titleInput = document.getElementById("local-album-title");
   const dateInput = document.getElementById("local-album-date");
 
-  uploadToggle.addEventListener("click", quickUploadNewAlbum);
+  uploadToggle.addEventListener("click", openUploadPanel);
+  document.getElementById("nav-upload-button").addEventListener("click", () => {
+    if (uploadForm.hidden) openUploadPanel();
+    else document.getElementById("upload").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 
   uploadMode.addEventListener("change", () => {
     const useExisting = uploadMode.value === "existing";
@@ -1096,9 +1006,14 @@ const bindGalleryEvents = () => {
     const files = document.getElementById("local-album-files").files;
     if (!files.length) return;
     setUploadStatus("准备上传...");
-    const ok = await addLocalAlbum(title || "她的新合集", date, files, targetAlbum?.id || "");
+    let ok = false;
+    try {
+      ok = await addLocalAlbum(title || "她的新合集", date, files, targetAlbum?.id || "");
+    } catch (error) {
+      setUploadStatus(error.message || "上传没有成功，请再试一次");
+    }
     if (!ok) {
-      setUploadStatus("上传没有成功，请再试一次");
+      if (!document.getElementById("upload-status").textContent) setUploadStatus("上传没有成功，请再试一次");
       return;
     }
     setUploadStatus("上传完成");
@@ -1111,55 +1026,19 @@ const bindGalleryEvents = () => {
     }, 800);
   });
 
-  document.getElementById("quick-album-files").addEventListener("change", async (event) => {
-    const files = event.currentTarget.files;
-    if (!files.length) return;
-    const title = window.prompt("这个合集叫什么？例如：威海的小路", "");
-    if (title === null || !title.trim()) {
-      event.currentTarget.value = "";
-      return;
-    }
-    const date = window.prompt("日期可以先填，也可以之后点日期改。格式：2026-05-24", new Date().toISOString().slice(0, 10));
-    if (date === null) {
-      event.currentTarget.value = "";
-      return;
-    }
-    const trimmedDate = date.trim();
-    if (trimmedDate && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
-      window.alert("日期格式用 2026-05-24 这种。");
-      event.currentTarget.value = "";
-      return;
-    }
-    setUploadStatus("准备上传...");
-    const ok = await addLocalAlbum(title.trim(), trimmedDate, files, "");
-    setUploadStatus(ok ? "上传完成" : "上传没有成功，请再试一次");
-    event.currentTarget.value = "";
-    setTimeout(() => setUploadStatus(""), 1200);
-  });
-
   document.getElementById("quick-current-files").addEventListener("change", async (event) => {
     const album = currentAlbum();
     const files = event.currentTarget.files;
     if (!album || !files.length) return;
     setUploadStatus("准备上传...");
-    const ok = await addLocalAlbum(album.title, album.date, files, album.id);
-    setUploadStatus(ok ? "上传完成" : "上传没有成功，请再试一次");
+    try {
+      const ok = await addLocalAlbum(album.title, album.date, files, album.id);
+      setUploadStatus(ok ? "上传完成" : "上传没有成功，请再试一次");
+    } catch (error) {
+      setUploadStatus(error.message || "上传没有成功，请再试一次");
+    }
     event.currentTarget.value = "";
     setTimeout(() => setUploadStatus(""), 1200);
-  });
-
-  document.getElementById("food-form").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const shop = document.getElementById("food-shop").value.trim();
-    if (!shop) return;
-    await saveFood({
-      shop,
-      place: document.getElementById("food-place").value.trim(),
-      dishes: document.getElementById("food-dishes").value.trim(),
-      rating: document.getElementById("food-rating").value,
-      note: document.getElementById("food-note").value.trim(),
-    });
-    event.currentTarget.reset();
   });
 };
 
@@ -1168,34 +1047,12 @@ const initGallery = () => {
   renderStats(state.data);
   renderTimeline(state.data.albums);
   renderExistingAlbumOptions();
-  renderFoods();
   state.initialized = true;
   document.getElementById("auth-error").textContent = "";
 };
 
-const setHomeView = (view) => {
-  const nextView = view === "food" ? "food" : "timeline";
-  document.querySelectorAll("[data-view-panel]").forEach((panel) => {
-    panel.hidden = panel.dataset.viewPanel !== nextView;
-  });
-  document.querySelectorAll("[data-view-tab]").forEach((tab) => {
-    const active = tab.dataset.viewTab === nextView;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-pressed", String(active));
-  });
-  sessionStorage.setItem("hehe-home-view", nextView);
-};
-
-const bindHomeViewTabs = () => {
-  document.querySelectorAll("[data-view-tab]").forEach((tab) => {
-    tab.addEventListener("click", () => setHomeView(tab.dataset.viewTab));
-  });
-  setHomeView(sessionStorage.getItem("hehe-home-view") || "timeline");
-};
-
 const init = () => {
   bindAuth();
-  bindHomeViewTabs();
   const savedPassword = sessionStorage.getItem(AUTH_KEY);
   if (savedPassword && savedPassword !== "unlocked") {
     showGallery(savedPassword).catch(() => {

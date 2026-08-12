@@ -1092,8 +1092,7 @@ main {
 
 .upload-panel {
   position: relative;
-  height: 0;
-  margin: 0;
+  margin: 20px 0 8px;
   overflow: visible;
 }
 
@@ -1117,11 +1116,16 @@ main {
 .local-album-form {
   display: grid;
   width: min(560px, 100%);
+  margin-top: 12px;
   gap: 12px;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
+}
+
+.local-album-form[hidden] {
+  display: none;
 }
 
 .local-album-form input,
@@ -1145,6 +1149,12 @@ main {
   min-height: 20px;
   color: var(--muted);
   text-align: center;
+}
+
+.local-album-form .upload-limits {
+  min-height: 0;
+  text-align: left;
+  font-size: 13px;
 }
 
 .gallery-actions {

@@ -1,11 +1,31 @@
-export const json = (data, init = {}) =>
+const ALLOWED_ORIGINS = new Set([
+  "https://hanwn125-sketch.github.io",
+  "https://hehe-memory-gallery.pages.dev",
+]);
+
+export const corsHeaders = (request) => {
+  const origin = request?.headers.get("Origin") || "";
+  if (!ALLOWED_ORIGINS.has(origin)) return {};
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Site-Password",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+};
+
+export const json = (data, init = {}, request) =>
   new Response(JSON.stringify(data), {
     ...init,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      ...corsHeaders(request),
       ...(init.headers || {}),
     },
   });
+
+export const preflight = (request) => new Response(null, { status: 204, headers: corsHeaders(request) });
 
 export const requireAuth = (request, env) => {
   const expected = String(env.ACCESS_PASSWORD || "").trim();
@@ -13,7 +33,7 @@ export const requireAuth = (request, env) => {
   return Boolean(expected && actual && actual === expected);
 };
 
-export const unauthorized = () => json({ error: "unauthorized" }, { status: 401 });
+export const unauthorized = (request) => json({ error: "unauthorized" }, { status: 401 }, request);
 
 export const albumFromRows = (album, photos) => ({
   id: album.id,
